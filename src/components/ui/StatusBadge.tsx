@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import styled, { CSSObject } from '@emotion/styled';
+import styled from '@emotion/styled';
 import { colors, radius } from '@/theme';
 import { useTranslation } from '@/hooks/useTranslation';
 

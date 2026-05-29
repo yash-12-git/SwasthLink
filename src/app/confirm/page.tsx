@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Check, Info, ArrowRight, RefreshCw, Building2 } from 'lucide-react';
 import { MobileLayout }  from '@/components/layout/MobileLayout';
 import { BottomNav }     from '@/components/layout/BottomNav';
@@ -18,13 +17,12 @@ import { useQueueStore }    from '@/store/queueStore';
 import { useTranslation }   from '@/hooks/useTranslation';
 
 export default function ConfirmPage() {
-  const router        = useRouter();
+  
   const { t }         = useTranslation();
   const activeEntry   = usePatientStore((s) => s.activeEntry);
   const patient       = usePatientStore((s) => s.patient);
   const selectedDoctor= usePatientStore((s) => s.selectedDoctor);
   const selectedDept  = usePatientStore((s) => s.selectedDept);
-  const live          = useQueueStore((s) => s.live);
   const ahead         = useQueueStore((s) => s.patientsAhead());
   const wait          = useQueueStore((s) => s.estimatedWait());
 

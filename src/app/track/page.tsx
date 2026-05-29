@@ -15,7 +15,7 @@ import { useTranslation }    from '@/hooks/useTranslation';
 
 export default function TrackPage() {
   const { t }         = useTranslation();
-  const activeEntry   = usePatientStore((s) => s.activeEntry);
+  
   const selectedDept  = usePatientStore((s) => s.selectedDept);
   const selectedDoctor= usePatientStore((s) => s.selectedDoctor);
   const live          = useQueueStore((s) => s.live);

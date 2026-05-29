@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { colors, radius, shadows } from '@/theme';
+import { colors, radius } from '@/theme';
 
 type AlertVariant = 'info' | 'success' | 'warning' | 'danger';
 

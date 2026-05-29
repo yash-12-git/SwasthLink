@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useEffect, useReducer } from 'react';
-import { RefreshCw, Phone } from 'lucide-react';
+import { Phone } from 'lucide-react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { TokenDisplay } from '@/components/ui/TokenDisplay';
 import { Pill } from '@/components/ui/Pill';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Button } from '@/components/ui/Button';

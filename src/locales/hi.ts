@@ -174,6 +174,6 @@ const hi: TranslationKeys = {
     cardio: 'हृदय रोग',
     skin: 'त्वचा रोग',
   },
-} as const;
+};
 
 export default hi;

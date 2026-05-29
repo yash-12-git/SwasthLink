@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useQueueStore } from '@/store/queueStore';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase';
 
 /**
  * Subscribes to realtime queue updates for a given queueId.
@@ -38,7 +38,8 @@ export function useRealtimeQueue(queueId: string | undefined) {
   useEffect(() => {
     if (!queueId || !isSupabaseConfigured) return;
 
-    const channel = supabase
+    const client = getSupabaseClient();
+    const channel = client
       .channel(`queue:${queueId}`)
       .on(
         'postgres_changes',
@@ -54,6 +55,6 @@ export function useRealtimeQueue(queueId: string | undefined) {
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { client.removeChannel(channel); };
   }, [queueId, patchLive]);
 }

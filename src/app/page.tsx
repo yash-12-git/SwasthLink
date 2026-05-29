@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { QrCode, RefreshCw, Users, Clock, ChevronRight, Phone } from 'lucide-react';
+import { QrCode, RefreshCw, Users, ChevronRight, Phone } from 'lucide-react';
 import { MobileLayout }   from '@/components/layout/MobileLayout';
 import { PatientHeader }  from '@/components/layout/PatientHeader';
 import { BottomNav }      from '@/components/layout/BottomNav';

@@ -172,7 +172,7 @@ const en = {
     cardio: 'Cardiology',
     skin: 'Dermatology',
   },
-} as const;
+};
 
 export type TranslationKeys = typeof en;
 export default en;

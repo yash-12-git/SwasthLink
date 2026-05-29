@@ -14,8 +14,7 @@ interface DepartmentCardProps {
 }
 
 export function DepartmentCard({ dept, onClick }: DepartmentCardProps) {
-  const { t, locale } = useTranslation();
-  const displayName = locale === 'hi' ? dept.nameHi : dept.name;
+  const { t } = useTranslation();
 
   return (
     <Card
