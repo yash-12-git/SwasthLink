@@ -213,21 +213,24 @@ export function DoctorQueueDashboard() {
   }
 
   const {
-    currentTokenLabel, isPaused, skipped, lastCallAt, avgMins,
-    upcoming, seenToday, doctorName, room, departmentName,
+    currentTokenLabel, currentPatientName, isPaused, skipped, lastCallAt, avgMins,
+    upcoming, seenToday, doctorName, room, departmentName, currentToken,
   } = queueState;
 
   const sinceCall  = Date.now() - lastCallAt;
   const nextEntry  = upcoming[0] as AdminQueueEntry | undefined;
   const nextLabel  = nextEntry?.label ?? '—';
 
-  // Current patient is the one just called (currentToken)
-  const currentPatient = {
-    name: upcoming.length > 0
-      ? upcoming[0].patientName  // next in line is displayed as "up next"
-      : 'Queue Clear',
-    label: currentTokenLabel,
-  };
+  // "Next Patient" should be enabled as long as there is someone to act on:
+  // either a patient currently in the room (to mark done) or someone waiting (to call).
+  // It should only be disabled when the queue is truly empty — no current patient AND no upcoming.
+  const hasCurrentPatient = currentToken > 0 && Boolean(currentPatientName);
+  const canCallNext = !isPaused && (hasCurrentPatient || upcoming.length > 0);
+
+  // Name of the patient currently in the room (served by "Next Patient" call)
+  const currentName = currentToken === 0
+    ? '—'
+    : (currentPatientName ?? 'Queue Clear');
 
   const stats = [
     { label: 'In Queue', value: upcoming.length, color: colors.primary },
@@ -302,9 +305,9 @@ export function DoctorQueueDashboard() {
                 {fmtSecs(sinceCall)} in consult
               </span>
             </div>
-            <TokenBig>{currentTokenLabel}</TokenBig>
+            <TokenBig>{currentToken === 0 ? '—' : currentTokenLabel}</TokenBig>
             <div style={{ fontSize: 15, fontWeight: 700 }}>
-              {currentPatient.name}
+              {currentName}
             </div>
           </ServingHero>
 
@@ -315,10 +318,10 @@ export function DoctorQueueDashboard() {
               variant="success"
               full
               onClick={next}
-              disabled={isPaused || upcoming.length === 0}
+              disabled={!canCallNext}
               aria-label="Call next patient"
             >
-              ✓ Next Patient
+              ✓ {upcoming.length > 0 ? 'Next Patient' : 'Done'}
             </Button>
             <Button
               size="lg"
@@ -441,10 +444,10 @@ export function DoctorQueueDashboard() {
           variant="success"
           style={{ flex: 2 }}
           onClick={next}
-          disabled={isPaused || upcoming.length === 0}
-          aria-label={`Call ${nextLabel}`}
+          disabled={!canCallNext}
+          aria-label={upcoming.length > 0 ? `Call ${nextLabel}` : 'Done with current patient'}
         >
-          ✓ Call {nextLabel}
+          {upcoming.length > 0 ? `✓ Call ${nextLabel}` : '✓ Done'}
         </Button>
       </MobileActionBar>
     </DashRoot>

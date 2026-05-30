@@ -61,6 +61,14 @@ export default function TrackPage() {
 
   const deptName    = live?.departmentName ?? activeEntry?._departmentName ?? '…';
   const doctorName  = live?.doctorName     ?? activeEntry?._doctorName     ?? '…';
+
+  // When the doctor has advanced past this patient's token, the visit is complete.
+  const isDone = Boolean(live && live.currentToken > live.yourToken);
+
+  const handleDone = () => {
+    if (selectedPatient) clearActiveEntry(selectedPatient.id);
+    setLive(null);
+  };
   const isRestoring = Boolean(activeEntry && !live);
 
   const [showCancel, setShowCancel]   = useState(false);
@@ -185,7 +193,23 @@ export default function TrackPage() {
           <>
             <LiveTracker />
 
-            {/* Cancel token */}
+            {/* Done state — visit complete */}
+            {isDone ? (
+              <div style={{ padding: '0 16px 24px' }}>
+                <button
+                  onClick={handleDone}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: 12, border: 'none',
+                    background: colors.success, color: '#fff',
+                    fontWeight: 800, fontSize: 15, cursor: 'pointer',
+                  }}
+                >
+                  Done — leave queue
+                </button>
+              </div>
+            ) : (
+
+            /* Cancel token */
             <div style={{ padding: '0 16px 24px' }}>
               {!showCancel ? (
                 <div style={{ textAlign: 'center' }}>
@@ -243,6 +267,7 @@ export default function TrackPage() {
                 </div>
               )}
             </div>
+            )}
           </>
         ) : (
           /* No active entry for selected patient */

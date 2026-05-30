@@ -59,7 +59,18 @@ export async function getAdminQueueState(
     .neq('token_number', queue.current_token)
     .order('token_number', { ascending: true });
 
-  // seenToday = actual done count for today (not current_token which is a seed artifact)
+  // Fetch the current patient's name (token being served right now)
+  const { data: currentEntry } = await admin
+    .from('queue_entries')
+    .select('patients(name)')
+    .eq('queue_id', queueId)
+    .eq('token_number', queue.current_token)
+    .eq('status', 'waiting')
+    .maybeSingle();
+  const currentPatientRaw = currentEntry?.patients as unknown as { name: string } | null;
+  const currentPatientName = currentPatientRaw?.name ?? undefined;
+
+  // seenToday = done patients today + 1 if there's a patient currently in the room
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const { count: doneCount } = await admin
@@ -84,13 +95,14 @@ export async function getAdminQueueState(
     departmentId:     doctor.department_id,
     departmentName:   doctor.departments?.name ?? '',
     hospitalId:       queue.hospital_id,
-    currentToken:     queue.current_token,
+    currentToken:      queue.current_token,
     currentTokenLabel: fmtLabel(prefix, queue.current_token),
-    isPaused:         queue.is_paused,
-    skipped:          skippedTokens.map((t) => ({ token: t, label: fmtLabel(prefix, t) })),
-    lastCallAt:       new Date(queue.updated_at).getTime(),
-    avgMins:          4,
-    upcoming:         (entries ?? []).map((e) => {
+    currentPatientName,
+    isPaused:          queue.is_paused,
+    skipped:           skippedTokens.map((t) => ({ token: t, label: fmtLabel(prefix, t) })),
+    lastCallAt:        new Date(queue.updated_at).getTime(),
+    avgMins:           4,
+    upcoming:          (entries ?? []).map((e) => {
       const p = e.patients as unknown as { name: string; age: number; gender: string };
       return {
         token: e.token_number,
@@ -100,7 +112,8 @@ export async function getAdminQueueState(
         gender: p?.gender,
       };
     }),
-    seenToday: doneCount ?? 0,
+    // seenToday = fully done patients today + 1 if a patient is currently in the room
+    seenToday: (doneCount ?? 0) + (currentEntry ? 1 : 0),
   };
 }
 

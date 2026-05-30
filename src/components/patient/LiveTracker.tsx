@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useReducer } from 'react';
+import { useEffect, useReducer } from 'react';
 import { Phone } from 'lucide-react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
@@ -31,14 +31,18 @@ export function LiveTracker() {
 
   if (!live) return null;
 
-  const paused   = live.doctorStatus === 'paused';
-  const isYou    = live.currentToken >= live.yourToken;
-  const isNear   = ahead <= 2 && ahead > 0;
+  const paused    = live.doctorStatus === 'paused';
+  const isCurrent = live.currentToken === live.yourToken;   // exactly your turn
+  const isDone    = live.currentToken > live.yourToken;     // turn has passed
+  const isYou     = isCurrent;                              // keep alias for hero color
+  const isNear    = ahead <= 2 && ahead > 0;
   const sinceCall = secsSince(live.lastCallAt);
 
-  const heroColor = isYou
-    ? `linear-gradient(160deg, ${colors.success}, #1B5E20)`
-    : `linear-gradient(160deg, ${colors.primary}, ${colors.primaryDark})`;
+  const heroColor = isDone
+    ? `linear-gradient(160deg, #388E3C, #1B5E20)`
+    : isCurrent
+      ? `linear-gradient(160deg, ${colors.success}, #1B5E20)`
+      : `linear-gradient(160deg, ${colors.primary}, ${colors.primaryDark})`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16 }}>
@@ -69,7 +73,11 @@ export function LiveTracker() {
 
         {/* Status box */}
         <div style={{ marginTop: 18, background: 'rgba(255,255,255,.14)', borderRadius: radius.sm, padding: '14px 16px', textAlign: 'center' }}>
-          {isYou ? (
+          {isDone ? (
+            <div style={{ fontSize: 19, fontWeight: 800 }}>
+              Visit complete — thank you!
+            </div>
+          ) : isCurrent ? (
             <div style={{ fontSize: 19, fontWeight: 800 }}>
               {t('track.itsYourTurn', { room: live.room })}
             </div>

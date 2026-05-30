@@ -45,6 +45,7 @@ export interface AdminQueueState {
   hospitalId: string;
   currentToken: number;
   currentTokenLabel: string;
+  currentPatientName?: string;  // name of the patient currently in the room
   isPaused: boolean;
   skipped: Array<{ token: number; label: string }>;
   lastCallAt: number;
