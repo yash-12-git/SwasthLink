@@ -2,6 +2,7 @@
 
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { buildMockLiveQueue, fmtToken } from '@/lib/mockData';
+import { checkRateLimit } from '@/lib/rateLimit';
 import type { QueueEntry, LiveQueueState } from '@/types/queue';
 
 let mockTokenCounter = 47;
@@ -21,6 +22,12 @@ export interface JoinQueueResult {
 }
 
 export async function joinQueue(input: JoinQueueInput): Promise<JoinQueueResult> {
+  // Rate limit: 3 joins per patient per minute (prevents token spam)
+  const rl = checkRateLimit(`join:${input.patientId}`, 'joinQueue');
+  if (!rl.allowed) {
+    throw new Error(`Too many queue join attempts. Please wait ${Math.ceil((rl.retryAfterMs ?? 60000) / 1000)}s before trying again.`);
+  }
+
   if (!isSupabaseConfigured) {
     const token = ++mockTokenCounter;
     return {

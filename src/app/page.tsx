@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { QrCode, RefreshCw, Users, ChevronRight, Phone, Ticket, Clock, User } from 'lucide-react';
 import { MobileLayout }   from '@/components/layout/MobileLayout';
 import { PatientHeader }  from '@/components/layout/PatientHeader';
@@ -16,18 +17,31 @@ import type { Department } from '@/types/department';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePatientStore } from '@/store/patientStore';
 
-const HELPDESK = process.env.NEXT_PUBLIC_HELPDESK_PHONE ?? '1800-180-1104';
-
 const DEPT_COLORS = ['#1565C0', '#6A3FB8', '#0E7C7B', '#D32F2F', '#ED6C02'];
 const DEPT_BG     = ['#E3F2FD', '#EFE8FA', '#E2F4F3', '#FFEBEE', '#FFF3E0'];
 
-export default function LandingPage() {
+function LandingPage() {
   const { t, locale }      = useTranslation();
   const account            = usePatientStore((s) => s.account);
   const familyMembers      = usePatientStore((s) => s.familyMembers);
   const selectedPatient    = usePatientStore((s) => s.selectedPatient);
   const setSelectedPatient = usePatientStore((s) => s.setSelectedPatient);
   const activeEntries      = usePatientStore((s) => s.activeEntries);
+  const setHospital        = usePatientStore((s) => s.setHospital);
+  const hospital           = usePatientStore((s) => s.hospital);
+
+  const searchParams = useSearchParams();
+
+  // Read ?h=slug from QR code and resolve hospital data
+  React.useEffect(() => {
+    const slug = searchParams.get('h');
+    if (!slug) return;
+    import('@/services/hospitalService').then(({ getHospitalBySlug }) => {
+      getHospitalBySlug(slug).then((h) => { if (h) setHospital(h); }).catch(() => {});
+    });
+  }, [searchParams, setHospital]);
+
+  const HELPDESK = hospital.helpdesk_phone ?? process.env.NEXT_PUBLIC_HELPDESK_PHONE ?? '1800-180-1104';
 
   const [departments, setDepartments] = React.useState<Department[]>(MOCK_DEPARTMENTS);
   const [liveOverview, setLiveOverview] = React.useState([
@@ -250,5 +264,13 @@ export default function LandingPage() {
 
       <BottomNav />
     </MobileLayout>
+  );
+}
+
+export default function LandingPageRoot() {
+  return (
+    <React.Suspense fallback={null}>
+      <LandingPage />
+    </React.Suspense>
   );
 }

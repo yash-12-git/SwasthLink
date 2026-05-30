@@ -6,11 +6,16 @@ import type { Department } from '@/types/department';
 import type { Doctor } from '@/types/doctor';
 import type { QueueEntry } from '@/types/queue';
 import type { Locale } from '@/lib/i18n';
+import type { Hospital } from '@/types/hospital';
 
 interface PatientStore {
   // ── i18n ─────────────────────────────────────────────────────────────
   locale: Locale;
   setLocale: (l: Locale) => void;
+
+  // ── Hospital context (set from QR code ?h=slug param) ────────────────
+  hospital: Partial<Hospital>;
+  setHospital: (h: Partial<Hospital>) => void;
 
   // ── Mobile account (one per phone number, shared by family) ──────────
   account: Partial<Account>;
@@ -44,6 +49,7 @@ interface PatientStore {
 
 const initialState = {
   locale: 'en' as Locale,
+  hospital: {} as Partial<Hospital>,
   account: {},
   familyMembers: [],
   selectedPatient: null,
@@ -58,6 +64,8 @@ export const usePatientStore = create<PatientStore>()(
       ...initialState,
 
       setLocale: (locale) => set({ locale }),
+
+      setHospital: (hospital) => set({ hospital }),
 
       setAccount: (account) => set({ account }),
       setFamilyMembers: (familyMembers) => set({ familyMembers }),
@@ -82,6 +90,7 @@ export const usePatientStore = create<PatientStore>()(
       name: 'ht-patient-v2',
       partialize: (s) => ({
         locale:          s.locale,
+        hospital:        s.hospital,
         account:         s.account,
         familyMembers:   s.familyMembers,
         selectedPatient: s.selectedPatient,

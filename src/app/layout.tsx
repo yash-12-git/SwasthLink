@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import EmotionRegistry from '@/lib/EmotionRegistry';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
   title: 'SwasthLink — Smart Hospital Queue',
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width:         'device-width',
   initialScale:  1,
-  maximumScale:  1,   // prevent accidental zoom on form inputs
+  maximumScale:  1,
   themeColor:    '#1565C0',
 };
 
@@ -21,7 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <EmotionRegistry>
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </EmotionRegistry>
       </body>
     </html>

@@ -6,11 +6,13 @@ import { colors } from '@/theme';
 import { usePatientStore } from '@/store/patientStore';
 import type { Locale } from '@/lib/i18n';
 
-const HOSPITAL_NAME = process.env.NEXT_PUBLIC_HOSPITAL_NAME ?? 'District General Hospital';
-const HOSPITAL_TAGLINE = process.env.NEXT_PUBLIC_HOSPITAL_TAGLINE ?? 'Govt. of India · जिला अस्पताल';
+const DEFAULT_NAME    = process.env.NEXT_PUBLIC_HOSPITAL_NAME    ?? 'District General Hospital';
+const DEFAULT_TAGLINE = process.env.NEXT_PUBLIC_HOSPITAL_TAGLINE ?? 'Govt. of India · जिला अस्पताल';
 
 export function PatientHeader() {
-  const { locale, setLocale } = usePatientStore();
+  const { locale, setLocale, hospital } = usePatientStore();
+  const HOSPITAL_NAME    = hospital.name    ?? DEFAULT_NAME;
+  const HOSPITAL_TAGLINE = hospital.name_hi ?? DEFAULT_TAGLINE;
 
   const toggleLocale = () => {
     const next: Locale = locale === 'en' ? 'hi' : 'en';
@@ -48,6 +50,7 @@ export function PatientHeader() {
         {/* Language switcher */}
         <button
           onClick={toggleLocale}
+          aria-label={locale === 'en' ? 'Switch to Hindi' : 'Switch to English'}
           style={{
             background:   'rgba(255,255,255,.14)',
             border:       '1px solid rgba(255,255,255,.25)',
@@ -58,15 +61,20 @@ export function PatientHeader() {
             fontWeight:   700,
             cursor:       'pointer',
             fontFamily:   'inherit',
+            minHeight:    '36px',
           }}
         >
           {locale === 'en' ? 'हिंदी' : 'EN'}
         </button>
 
         {/* Notification bell */}
-        <div style={{ position: 'relative', width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div
+          role="status"
+          aria-label="Notifications"
+          style={{ position: 'relative', width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,.14)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
           <Bell size={18} color="#fff" />
-          <span style={{ position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: '50%', background: colors.warning, border: '1.5px solid #1565C0' }} />
+          <span aria-hidden="true" style={{ position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: '50%', background: colors.warning, border: '1.5px solid #1565C0' }} />
         </div>
       </div>
     </div>
