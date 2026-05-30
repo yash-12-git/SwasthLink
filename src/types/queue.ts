@@ -18,6 +18,9 @@ export interface QueueEntry {
   token_label: string;    // e.g. "G-047"
   status: QueueEntryStatus;
   created_at: string;
+  // Client-side enrichment — not stored in DB
+  _departmentName?: string;
+  _doctorName?: string;
 }
 
 export interface LiveQueueState {

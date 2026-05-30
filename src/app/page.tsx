@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { QrCode, RefreshCw, Users, ChevronRight, Phone } from 'lucide-react';
+import { QrCode, RefreshCw, Users, ChevronRight, Phone, Ticket, Clock, User } from 'lucide-react';
 import { MobileLayout }   from '@/components/layout/MobileLayout';
 import { PatientHeader }  from '@/components/layout/PatientHeader';
 import { BottomNav }      from '@/components/layout/BottomNav';
@@ -10,27 +10,54 @@ import { Card }           from '@/components/ui/Card';
 import { Button }         from '@/components/ui/Button';
 import { Pill }           from '@/components/ui/Pill';
 import { SectionLabel }   from '@/components/ui/SectionLabel';
-import { QueueWidget }    from '@/components/patient/QueueWidget';
 import { colors, radius } from '@/theme';
 import { MOCK_DEPARTMENTS } from '@/lib/mockData';
+import type { Department } from '@/types/department';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePatientStore } from '@/store/patientStore';
-import { useQueueStore }   from '@/store/queueStore';
 
 const HELPDESK = process.env.NEXT_PUBLIC_HELPDESK_PHONE ?? '1800-180-1104';
 
-// Dept icon colours for the grid (subset)
 const DEPT_COLORS = ['#1565C0', '#6A3FB8', '#0E7C7B', '#D32F2F', '#ED6C02'];
 const DEPT_BG     = ['#E3F2FD', '#EFE8FA', '#E2F4F3', '#FFEBEE', '#FFF3E0'];
 
 export default function LandingPage() {
-  const { t }       = useTranslation();
-  const activeEntry = usePatientStore((s) => s.activeEntry);
-  const live        = useQueueStore((s) => s.live);
+  const { t, locale }      = useTranslation();
+  const account            = usePatientStore((s) => s.account);
+  const familyMembers      = usePatientStore((s) => s.familyMembers);
+  const selectedPatient    = usePatientStore((s) => s.selectedPatient);
+  const setSelectedPatient = usePatientStore((s) => s.setSelectedPatient);
+  const activeEntries      = usePatientStore((s) => s.activeEntries);
 
-  // Show the token being served in the mini overview. Mock for now.
-  const servingLabel = 'G-042';
-  const cardioLabel  = 'C-118';
+  const [departments, setDepartments] = React.useState<Department[]>(MOCK_DEPARTMENTS);
+  const [liveOverview, setLiveOverview] = React.useState([
+    { deptId: 'general', deptName: 'General OPD', deptNameHi: 'सामान्य ओपीडी', currentTokenLabel: '—', color: '#1565C0' },
+    { deptId: 'cardio',  deptName: 'Cardiology',  deptNameHi: 'हृदय रोग',       currentTokenLabel: '—', color: '#D32F2F' },
+  ]);
+
+  React.useEffect(() => {
+    import('@/services/departmentService').then(({ getDepartments, getLiveOverview }) => {
+      getDepartments().then(setDepartments).catch(() => {});
+      getLiveOverview().then(setLiveOverview).catch(() => {});
+    });
+  }, []);
+
+  // Patients who currently have an active token
+  const activeVisits = familyMembers.filter((p) => activeEntries[p.id]);
+
+  // Smart routing:
+  // - No account       → /register
+  // - Account but no patient selected → /family
+  // - Patient selected → /department (skip re-selection)
+  const getTokenHref = !account.id
+    ? '/register'
+    : !selectedPatient
+    ? '/family'
+    : '/department';
+
+  // Department grid taps: go straight to doctor selection if patient is selected
+  const deptHref = (deptId: string) =>
+    selectedPatient ? `/doctor/${deptId}` : getTokenHref;
 
   return (
     <MobileLayout>
@@ -38,15 +65,90 @@ export default function LandingPage() {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* ── Persistent queue widget (if patient has active token) ── */}
-        {activeEntry && live && (
-          <Link href="/track" style={{ textDecoration: 'none' }}>
-            <QueueWidget variant="banner" />
-          </Link>
+        {/* ── "Visiting as" context bar ─────────────────────────────── */}
+        {account.id && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: colors.surface,
+            border: `1.5px solid ${selectedPatient ? colors.primary + '40' : colors.border}`,
+            borderRadius: radius.md,
+            padding: '10px 14px',
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+              background: selectedPatient ? colors.primary : colors.surface2,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <User size={18} color={selectedPatient ? '#fff' : colors.ink400} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {selectedPatient ? (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: colors.ink500 }}>Visiting as</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: colors.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {selectedPatient.name}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: colors.ink500 }}>{account.mobile}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: colors.ink500 }}>No patient selected</div>
+                </>
+              )}
+            </div>
+            <Link href="/family" style={{ textDecoration: 'none', flexShrink: 0 }}>
+              <span style={{
+                fontSize: 13, fontWeight: 700, color: colors.primary,
+                background: '#e8f0fe', borderRadius: 20, padding: '5px 12px',
+              }}>
+                {selectedPatient ? 'Change' : 'Select'}
+              </span>
+            </Link>
+          </div>
+        )}
+
+        {/* ── Active visits (one banner per patient with active token) ── */}
+        {activeVisits.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {activeVisits.map((patient) => {
+              const entry = activeEntries[patient.id];
+              return (
+                <Link
+                  key={patient.id}
+                  href="/track"
+                  onClick={() => setSelectedPatient(patient)}
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 14px',
+                    background: `linear-gradient(135deg, ${colors.primary}, ${colors.primaryDark})`,
+                    borderRadius: radius.md, color: '#fff',
+                    boxShadow: '0 4px 12px rgba(21,101,192,0.28)',
+                  }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Ticket size={22} color="#fff" />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.8)' }}>
+                        {patient.name}
+                        {entry._departmentName ? ` · ${entry._departmentName}` : ''}
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Clock size={14} />
+                        Token {entry.token_label} · Active
+                      </div>
+                    </div>
+                    <ChevronRight size={20} color="rgba(255,255,255,.8)" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         )}
 
         {/* ── Hero card ───────────────────────────────────────────── */}
-        <Card style={{ position: 'relative', overflow: 'hidden' }}>
+        <Card style={{ position: 'relative' }}>
           <Pill bg={colors.success50} color={colors.success} style={{ marginBottom: 12 }}>
             <QrCode size={13} /> {t('landing.qrScanned')}
           </Pill>
@@ -56,7 +158,7 @@ export default function LandingPage() {
           <div style={{ fontSize: 15, fontWeight: 600, color: colors.ink500, marginBottom: 14 }}>
             {t('landing.subtitle')}
           </div>
-          <Link href="/register" style={{ textDecoration: 'none', display: 'block' }}>
+          <Link href={getTokenHref} style={{ textDecoration: 'none', display: 'block' }}>
             <Button full size="lg">
               <QrCode size={20} /> {t('landing.getToken')} <ChevronRight size={20} />
             </Button>
@@ -73,14 +175,13 @@ export default function LandingPage() {
             {t('landing.nowServing')}
           </SectionLabel>
           <div style={{ display: 'flex', gap: 12 }}>
-            {[
-              { dept: 'General OPD', label: servingLabel, color: colors.primary },
-              { dept: 'Cardiology',  label: cardioLabel,  color: colors.danger  },
-            ].map((item) => (
-              <Card key={item.dept} pad="14px" style={{ flex: 1 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: colors.ink700, marginBottom: 8 }}>{item.dept}</div>
+            {liveOverview.map((item) => (
+              <Card key={item.deptId} pad="14px" style={{ flex: 1 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: colors.ink700, marginBottom: 8 }}>
+                  {locale === 'hi' && item.deptNameHi ? item.deptNameHi : item.deptName}
+                </div>
                 <div style={{ fontSize: 28, fontWeight: 800, color: item.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                  {item.label}
+                  {item.currentTokenLabel}
                 </div>
                 <div style={{ fontSize: 11.5, color: colors.ink500, fontWeight: 600, marginTop: 3 }}>
                   {t('landing.tokenServing')}
@@ -100,8 +201,8 @@ export default function LandingPage() {
             {t('landing.departments')}
           </SectionLabel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-            {MOCK_DEPARTMENTS.slice(0, 5).map((d, i) => (
-              <Link key={d.id} href="/register" style={{ textDecoration: 'none' }}>
+            {departments.slice(0, 5).map((d, i) => (
+              <Link key={d.id} href={deptHref(d.id)} style={{ textDecoration: 'none' }}>
                 <div style={{
                   background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radius.md,
                   padding: '14px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
@@ -110,7 +211,9 @@ export default function LandingPage() {
                   <div style={{ width: 42, height: 42, borderRadius: radius.md, background: DEPT_BG[i], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Users size={22} color={DEPT_COLORS[i]} />
                   </div>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: colors.ink700, textAlign: 'center', lineHeight: 1.1 }}>{d.name}</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: colors.ink700, textAlign: 'center', lineHeight: 1.1 }}>
+                    {locale === 'hi' && d.nameHi ? d.nameHi : d.name}
+                  </div>
                 </div>
               </Link>
             ))}

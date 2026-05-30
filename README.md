@@ -1,4 +1,4 @@
-# HospiTesch — Smart Hospital Queue System
+# SwasthLink — Smart Hospital Queue System
 
 > Realtime QR-based OPD queue management platform for government and high-volume hospitals in India.
 
@@ -22,7 +22,7 @@
 ## Quick Start
 
 ```bash
-cd hospitesch
+cd swasthlink
 cp .env.example .env.local   # fill in Supabase keys (or leave USE_MOCK_DATA=true)
 npm install
 npm run dev

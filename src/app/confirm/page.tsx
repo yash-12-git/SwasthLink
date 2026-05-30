@@ -17,17 +17,17 @@ import { useQueueStore }    from '@/store/queueStore';
 import { useTranslation }   from '@/hooks/useTranslation';
 
 export default function ConfirmPage() {
-  
-  const { t }         = useTranslation();
-  const activeEntry   = usePatientStore((s) => s.activeEntry);
-  const patient       = usePatientStore((s) => s.patient);
-  const selectedDoctor= usePatientStore((s) => s.selectedDoctor);
-  const selectedDept  = usePatientStore((s) => s.selectedDept);
-  const ahead         = useQueueStore((s) => s.patientsAhead());
-  const wait          = useQueueStore((s) => s.estimatedWait());
+  const { t }            = useTranslation();
+  const selectedPatient  = usePatientStore((s) => s.selectedPatient);
+  const activeEntries    = usePatientStore((s) => s.activeEntries);
+  const selectedDoctor   = usePatientStore((s) => s.selectedDoctor);
+  const selectedDept     = usePatientStore((s) => s.selectedDept);
+  const ahead            = useQueueStore((s) => s.patientsAhead());
+  const wait             = useQueueStore((s) => s.estimatedWait());
 
-  // Redirect if no entry
-  if (!activeEntry) {
+  const activeEntry = selectedPatient ? activeEntries[selectedPatient.id] : null;
+
+  if (!activeEntry || !selectedPatient) {
     return (
       <MobileLayout>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
@@ -70,7 +70,7 @@ export default function ConfirmPage() {
               {activeEntry.token_label}
             </div>
             <div style={{ fontSize: 13.5, fontWeight: 600, color: colors.ink500 }}>
-              {patient.name ?? 'Patient'} · Age {patient.age ?? '—'}
+              {selectedPatient.name} · Age {selectedPatient.age}
             </div>
 
             {/* Mini stats */}

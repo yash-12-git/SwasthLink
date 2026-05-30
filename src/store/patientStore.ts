@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { Account } from '@/types/account';
 import type { Patient } from '@/types/patient';
 import type { Department } from '@/types/department';
 import type { Doctor } from '@/types/doctor';
@@ -7,35 +8,48 @@ import type { QueueEntry } from '@/types/queue';
 import type { Locale } from '@/lib/i18n';
 
 interface PatientStore {
-  // ── i18n ───────────────────────────────────────────────────────────
+  // ── i18n ─────────────────────────────────────────────────────────────
   locale: Locale;
   setLocale: (l: Locale) => void;
 
-  // ── Registration form ──────────────────────────────────────────────
-  patient: Partial<Patient>;
-  setPatient: (p: Partial<Patient>) => void;
+  // ── Mobile account (one per phone number, shared by family) ──────────
+  account: Partial<Account>;
+  setAccount: (a: Partial<Account>) => void;
 
-  // ── Selected department / doctor ───────────────────────────────────
+  // ── Family members under this account ───────────────────────────────
+  familyMembers: Patient[];
+  setFamilyMembers: (members: Patient[]) => void;
+  addFamilyMember: (p: Patient) => void;
+
+  // ── Who is visiting today ────────────────────────────────────────────
+  selectedPatient: Patient | null;
+  setSelectedPatient: (p: Patient) => void;
+
+  // ── Per-patient active queue entries ─────────────────────────────────
+  // One active token per patient; key = patient.id
+  activeEntries: Record<string, QueueEntry>;
+  setActiveEntry: (patientId: string, entry: QueueEntry) => void;
+  clearActiveEntry: (patientId: string) => void;
+
+  // ── Navigation state (not persisted) ────────────────────────────────
   selectedDept: Department | null;
   setSelectedDept: (d: Department) => void;
 
   selectedDoctor: Doctor | null;
   setSelectedDoctor: (d: Doctor) => void;
 
-  // ── Active queue entry (after joining) ────────────────────────────
-  activeEntry: QueueEntry | null;
-  setActiveEntry: (e: QueueEntry) => void;
-
-  // ── Reset ─────────────────────────────────────────────────────────
-  reset: () => void;
+  // ── Reset ─────────────────────────────────────────────────────────────
+  clearAccount: () => void;
 }
 
 const initialState = {
   locale: 'en' as Locale,
-  patient: {},
+  account: {},
+  familyMembers: [],
+  selectedPatient: null,
+  activeEntries: {},
   selectedDept: null,
   selectedDoctor: null,
-  activeEntry: null,
 };
 
 export const usePatientStore = create<PatientStore>()(
@@ -45,17 +59,34 @@ export const usePatientStore = create<PatientStore>()(
 
       setLocale: (locale) => set({ locale }),
 
-      setPatient:      (patient)      => set({ patient }),
-      setSelectedDept: (selectedDept) => set({ selectedDept }),
-      setSelectedDoctor:(selectedDoctor) => set({ selectedDoctor }),
-      setActiveEntry:  (activeEntry)  => set({ activeEntry }),
+      setAccount: (account) => set({ account }),
+      setFamilyMembers: (familyMembers) => set({ familyMembers }),
+      addFamilyMember: (p) => set((s) => ({ familyMembers: [...s.familyMembers, p] })),
 
-      reset: () => set(initialState),
+      setSelectedPatient: (selectedPatient) => set({ selectedPatient }),
+
+      setActiveEntry: (patientId, entry) =>
+        set((s) => ({ activeEntries: { ...s.activeEntries, [patientId]: entry } })),
+      clearActiveEntry: (patientId) =>
+        set((s) => {
+          const { [patientId]: _removed, ...rest } = s.activeEntries;
+          return { activeEntries: rest };
+        }),
+
+      setSelectedDept:   (selectedDept)   => set({ selectedDept }),
+      setSelectedDoctor: (selectedDoctor) => set({ selectedDoctor }),
+
+      clearAccount: () => set(initialState),
     }),
     {
-      name: 'ht-patient',
-      // Only persist locale + activeEntry across sessions
-      partialize: (s) => ({ locale: s.locale, activeEntry: s.activeEntry }),
+      name: 'ht-patient-v2',
+      partialize: (s) => ({
+        locale:          s.locale,
+        account:         s.account,
+        familyMembers:   s.familyMembers,
+        selectedPatient: s.selectedPatient,
+        activeEntries:   s.activeEntries,
+      }),
     },
   ),
 );

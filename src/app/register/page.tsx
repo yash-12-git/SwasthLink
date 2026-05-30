@@ -1,118 +1,89 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { User, Phone, Calendar, ArrowRight } from 'lucide-react';
+import { Phone, ArrowRight } from 'lucide-react';
 import { MobileLayout }    from '@/components/layout/MobileLayout';
 import { BackBar }         from '@/components/layout/BackBar';
 import { BottomNav }       from '@/components/layout/BottomNav';
-import { TextField, SegmentedField } from '@/components/ui/Field';
+import { TextField }       from '@/components/ui/Field';
 import { Button }          from '@/components/ui/Button';
 import { colors }          from '@/theme';
 import { usePatientStore } from '@/store/patientStore';
-import { useTranslation }  from '@/hooks/useTranslation';
-import type { Gender }     from '@/types/patient';
-
-function buildSchema(t: (k: string) => string) {
-  return z.object({
-    name:   z.string().min(2, t('register.errors.nameMin')),
-    mobile: z.string().regex(/^\d{10}$/, t('register.errors.mobileInvalid')),
-    age:    z.string().regex(/^([1-9]|[1-9]\d|1[01]\d|120)$/, t('register.errors.ageInvalid')),
-    gender: z.enum(['M', 'F', 'O'], { required_error: t('register.errors.genderRequired') }),
-  });
-}
-
-type FormData = { name: string; mobile: string; age: string; gender: Gender };
 
 export default function RegisterPage() {
-  const router      = useRouter();
-  const { t }       = useTranslation();
-  const setPatient  = usePatientStore((s) => s.setPatient);
+  const router          = useRouter();
+  const account         = usePatientStore((s) => s.account);
+  const setAccount      = usePatientStore((s) => s.setAccount);
+  const setFamilyMembers = usePatientStore((s) => s.setFamilyMembers);
+  const clearAccount    = usePatientStore((s) => s.clearAccount);
 
-  const schema = buildSchema(t);
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
-  });
+  const [mobile, setMobile]   = useState('');
+  const [error, setError]     = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const genderValue = watch('gender');
+  // Already logged in — skip straight to family selection
+  useEffect(() => {
+    if (account.id) router.replace('/family');
+  }, [account.id, router]);
 
-  const onSubmit = (data: FormData) => {
-    setPatient({ name: data.name, mobile: data.mobile, age: parseInt(data.age), gender: data.gender });
-    router.push('/department');
+  if (account.id) return null;
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^\d{10}$/.test(mobile)) {
+      setError('Please enter a valid 10-digit mobile number');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { findOrCreateAccount, getPatientsByAccount } = await import('@/services/accountService');
+      const acc     = await findOrCreateAccount(mobile);
+      const members = await getPatientsByAccount(acc.id);
+      setAccount(acc);
+      setFamilyMembers(members);
+      router.push('/family');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <MobileLayout>
-      <BackBar
-        title={t('register.title')}
-        subtitle={t('register.stepLabel')}
-        href="/"
-      />
+      <BackBar title="Enter Mobile Number" subtitle="Step 1 of 3" href="/" />
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
-        noValidate
-      >
+      <form onSubmit={onSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column' }} noValidate>
         <div style={{ flex: 1, overflowY: 'auto', padding: '18px 16px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <p style={{ fontSize: 14, color: colors.ink500, fontWeight: 600, lineHeight: 1.4, margin: 0 }}>
-            {t('register.subtitle')}
+          <p style={{ fontSize: 14, color: colors.ink500, fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
+            One mobile number covers your whole family. You can add multiple patients — husband, wife, children, parents — under a single number.
           </p>
 
           <TextField
-            label={t('register.name')}
-            placeholder={t('register.namePlaceholder')}
-            icon={<User size={20} />}
-            autoFocus
-            error={errors.name?.message}
-            {...register('name')}
-            onChange={(v) => setValue('name', v, { shouldValidate: true })}
-            value={watch('name') ?? ''}
-          />
-
-          <TextField
-            label={t('register.mobile')}
-            placeholder={t('register.mobilePlaceholder')}
+            label="Mobile Number"
+            placeholder="9876543210"
             icon={<Phone size={20} />}
             inputMode="numeric"
-            hint={t('register.mobileHint')}
-            error={errors.mobile?.message}
-            {...register('mobile')}
-            onChange={(v) => setValue('mobile', v.replace(/\D/g, '').slice(0, 10), { shouldValidate: true })}
-            value={watch('mobile') ?? ''}
-          />
-
-          <TextField
-            label={t('register.age')}
-            placeholder={t('register.agePlaceholder')}
-            icon={<Calendar size={20} />}
-            inputMode="numeric"
-            error={errors.age?.message}
-            {...register('age')}
-            onChange={(v) => setValue('age', v.replace(/\D/g, '').slice(0, 3), { shouldValidate: true })}
-            value={watch('age') ?? ''}
-          />
-
-          <SegmentedField
-            label={t('register.gender')}
-            value={genderValue}
-            error={errors.gender?.message}
-            options={[
-              { value: 'F', label: t('register.female'), sub: 'Female' },
-              { value: 'M', label: t('register.male'),   sub: 'Male'   },
-              { value: 'O', label: t('register.other'),  sub: 'Other'  },
-            ]}
-            onChange={(v) => setValue('gender', v as Gender, { shouldValidate: true })}
+            hint="10-digit Indian mobile number"
+            error={error}
+            value={mobile}
+            onChange={(v) => { setMobile(v.replace(/\D/g, '').slice(0, 10)); setError(''); }}
+            autoFocus
           />
         </div>
 
-        <div style={{ padding: '12px 16px', borderTop: `1px solid ${colors.border}`, background: colors.surface, flexShrink: 0 }}>
-          <Button type="submit" full size="lg">
-            {t('register.submit')} <ArrowRight size={20} />
+        <div style={{ padding: '12px 16px', borderTop: `1px solid ${colors.border}`, background: colors.surface, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Button type="submit" full size="lg" disabled={loading || mobile.length !== 10}>
+            {loading ? 'Please wait…' : <>Continue <ArrowRight size={20} /></>}
           </Button>
+          <button
+            type="button"
+            onClick={clearAccount}
+            style={{ background: 'none', border: 'none', color: colors.ink400, fontSize: 13, cursor: 'pointer', padding: '4px 0' }}
+          >
+            Different number? Start over
+          </button>
         </div>
       </form>
 

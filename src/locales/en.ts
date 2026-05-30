@@ -1,6 +1,6 @@
 const en = {
   // ── Global ─────────────────────────────────────────────────────────
-  appName: 'HospiTesch',
+  appName: 'SwasthLink',
   tagline: 'Smart Hospital Queue System',
   loading: 'Loading…',
   error: 'Something went wrong. Please try again.',

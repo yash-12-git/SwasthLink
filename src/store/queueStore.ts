@@ -3,7 +3,7 @@ import type { LiveQueueState, UpcomingToken } from '@/types/queue';
 
 interface QueueStore {
   live: LiveQueueState | null;
-  setLive: (state: LiveQueueState) => void;
+  setLive: (state: LiveQueueState | null) => void;
 
   // Derived helpers
   patientsAhead:  () => number;

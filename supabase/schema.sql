@@ -1,5 +1,5 @@
 -- ============================================================
--- HospiTesch — Supabase PostgreSQL Schema
+-- SwasthLink — Supabase PostgreSQL Schema
 -- Run this in the Supabase SQL Editor to initialise the DB.
 -- ============================================================
 

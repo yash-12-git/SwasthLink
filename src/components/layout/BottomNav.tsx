@@ -17,7 +17,8 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const pathname     = usePathname();
   const { t }        = useTranslation();
-  const activeEntry  = usePatientStore((s) => s.activeEntry);
+  const activeEntries = usePatientStore((s) => s.activeEntries);
+  const hasAnyActive  = Object.keys(activeEntries).length > 0;
 
   return (
     <div
@@ -49,7 +50,7 @@ export function BottomNav() {
           >
             <div style={{ position: 'relative' }}>
               <Icon size={23} color={active ? colors.primary : colors.ink400} strokeWidth={active ? 2.4 : 2} />
-              {id === 'queue' && activeEntry && (
+              {id === 'queue' && hasAnyActive && (
                 <span style={{ position: 'absolute', top: -2, right: -4, width: 8, height: 8, borderRadius: '50%', background: colors.success, border: '1.5px solid #fff' }} />
               )}
             </div>

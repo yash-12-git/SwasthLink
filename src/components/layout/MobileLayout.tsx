@@ -15,7 +15,8 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   return (
     <div
       style={{
-        minHeight:     '100dvh',
+        height:        '100dvh',
+        overflow:      'hidden',
         background:    colors.bg,
         display:       'flex',
         flexDirection: 'column',

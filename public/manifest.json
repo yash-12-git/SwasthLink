@@ -1,6 +1,6 @@
 {
-  "name": "HospiTesch",
-  "short_name": "HospiTesch",
+  "name": "SwasthLink",
+  "short_name": "SwasthLink",
   "description": "Smart Hospital Queue System",
   "start_url": "/",
   "display": "standalone",

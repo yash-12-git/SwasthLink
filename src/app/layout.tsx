@@ -3,7 +3,7 @@ import './globals.css';
 import EmotionRegistry from '@/lib/EmotionRegistry';
 
 export const metadata: Metadata = {
-  title: 'HospiTesch — Smart Hospital Queue',
+  title: 'SwasthLink — Smart Hospital Queue',
   description: 'QR-based realtime OPD queue management for hospitals',
   manifest: '/manifest.json',
   icons: { icon: '/favicon.svg' },

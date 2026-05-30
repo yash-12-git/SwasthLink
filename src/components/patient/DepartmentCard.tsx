@@ -14,7 +14,9 @@ interface DepartmentCardProps {
 }
 
 export function DepartmentCard({ dept, onClick }: DepartmentCardProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const primaryName   = locale === 'hi' && dept.nameHi ? dept.nameHi : dept.name;
+  const secondaryName = locale === 'hi' ? dept.name : dept.nameHi;
 
   return (
     <Card
@@ -37,8 +39,8 @@ export function DepartmentCard({ dept, onClick }: DepartmentCardProps) {
 
       {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: colors.ink, lineHeight: 1.1 }}>{dept.name}</div>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: colors.ink500, marginBottom: 6 }}>{dept.nameHi}</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: colors.ink, lineHeight: 1.1 }}>{primaryName}</div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: colors.ink500, marginBottom: 6 }}>{secondaryName}</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {dept.activeQueue != null && (
             <Pill>

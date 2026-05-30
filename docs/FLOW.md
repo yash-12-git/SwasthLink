@@ -1,4 +1,4 @@
-# HospiTesch — Patient Flow Documentation
+# SwasthLink — Patient Flow Documentation
 
 > Complete technical and UX documentation for the Phase 1 patient flow.
 
@@ -31,7 +31,7 @@
 
 ## 1. Overview
 
-HospiTesch Phase 1 is a **mobile-first patient flow** that lets a patient:
+SwasthLink Phase 1 is a **mobile-first patient flow** that lets a patient:
 
 1. Scan a QR code posted in the hospital OPD block
 2. Register with minimal details (name, mobile, age, gender)

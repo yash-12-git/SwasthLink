@@ -1,4 +1,4 @@
-# HospiTesch — Setup & Deployment Guide
+# SwasthLink — Setup & Deployment Guide
 
 > Step-by-step guide to run the project locally, connect Supabase, and deploy to Vercel.
 
@@ -48,10 +48,10 @@ Mock mode uses in-memory data. No Supabase account needed. This is the fastest w
 ```bash
 # If you cloned from GitHub:
 git clone <your-repo-url>
-cd hospitesch
+cd swasthlink
 
 # OR navigate to the existing folder:
-cd ~/Desktop/hospitesch
+cd ~/Desktop/swasthlink
 ```
 
 ### Step 2 — Install dependencies
@@ -97,7 +97,7 @@ Output:
 
 Navigate to **http://localhost:3000**
 
-You should see the HospiTesch landing page. The full patient flow works in mock mode:
+You should see the SwasthLink landing page. The full patient flow works in mock mode:
 
 ```
 / → /register → /department → /doctor/general → /confirm → /track
@@ -110,7 +110,7 @@ You should see the HospiTesch landing page. The full patient flow works in mock 
 ## 3. Project Structure at a Glance
 
 ```
-hospitesch/
+swasthlink/
 ├── docs/
 │   ├── FLOW.md          ← Patient flow documentation (this project)
 │   └── SETUP.md         ← This file
@@ -186,7 +186,7 @@ hospitesch/
 1. Go to **https://supabase.com** and sign in (free tier is sufficient for MVP)
 2. Click **New project**
 3. Fill in:
-   - **Name:** `hospitesch` (or any name)
+   - **Name:** `SwasthLink` (or any name)
    - **Database password:** use a strong password and save it somewhere safe
    - **Region:** choose the closest to your hospital location (India → Singapore or Mumbai)
 4. Click **Create new project** and wait ~1 minute for provisioning
@@ -314,7 +314,7 @@ Run this in the Supabase SQL Editor.
 
 ```bash
 # Create a repo on github.com, then:
-git remote add origin https://github.com/<your-username>/hospitesch.git
+git remote add origin https://github.com/<your-username>/swasthlink.git
 git push -u origin main
 ```
 
@@ -344,7 +344,7 @@ Set them for **Production**, **Preview**, and **Development** environments.
 
 Click **Deploy**. Vercel runs `npm run build` and deploys.
 
-Your app will be live at: `https://hospitesch.vercel.app` (or your custom domain).
+Your app will be live at: `https://swasthlink.vercel.app` (or your custom domain).
 
 ### Step 5 — Set up your QR code
 
