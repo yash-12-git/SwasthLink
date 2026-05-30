@@ -51,7 +51,7 @@ export function LiveTracker() {
             <div style={{ fontSize: 12.5, fontWeight: 700, color: 'rgba(255,255,255,.72)', textTransform: 'uppercase', letterSpacing: '.07em' }}>
               {t('track.yourToken')}
             </div>
-            <div style={{ fontSize: 56, fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+            <div style={{ fontSize: 45, fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
               {live.yourTokenLabel}
             </div>
           </div>
@@ -60,7 +60,7 @@ export function LiveTracker() {
             <div style={{ fontSize: 12.5, fontWeight: 700, color: 'rgba(255,255,255,.72)' }}>
               {t('track.nowServing')}
             </div>
-            <div style={{ fontSize: 34, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 7, justifyContent: 'flex-end', fontVariantNumeric: 'tabular-nums' }}>
+            <div style={{ fontSize: 28, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 7, justifyContent: 'flex-end', fontVariantNumeric: 'tabular-nums' }}>
               <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#fff', animation: 'ht-pulse 1.4s infinite', flexShrink: 0 }} />
               {live.currentTokenLabel}
             </div>
@@ -78,7 +78,7 @@ export function LiveTracker() {
               <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,.85)' }}>
                 {isNear ? t('track.almostYourTurn') : t('track.relax')}
               </div>
-              <div style={{ fontSize: 34, fontWeight: 800, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+              <div style={{ fontSize: 28, fontWeight: 800, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
                 {ahead} <span style={{ fontSize: 16, fontWeight: 700, opacity: 0.8 }}>{t('track.patientsAhead', { n: '' }).replace('{{n}} ', '')}</span>
               </div>
             </>
