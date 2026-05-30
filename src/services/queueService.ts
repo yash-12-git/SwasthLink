@@ -45,7 +45,7 @@ export async function joinQueue(input: JoinQueueInput): Promise<JoinQueueResult>
     };
   }
 
-  // Check for existing entry and fetch queue ID in parallel
+  // Check for existing entry and fetch queue ID + hospital_id in parallel
   const [{ data: existingEntry }, { data: queue, error: queueError }] = await Promise.all([
     supabase
       .from('queue_entries')
@@ -55,7 +55,7 @@ export async function joinQueue(input: JoinQueueInput): Promise<JoinQueueResult>
       .maybeSingle(),
     supabase
       .from('queues')
-      .select('id')
+      .select('id, hospital_id')
       .eq('doctor_id', input.doctorId)
       .single(),
   ]);
@@ -74,11 +74,12 @@ export async function joinQueue(input: JoinQueueInput): Promise<JoinQueueResult>
   const { data, error } = await supabase
     .from('queue_entries')
     .insert({
-      patient_id: input.patientId,
-      queue_id: queue.id,
-      doctor_id: input.doctorId,
+      patient_id:    input.patientId,
+      queue_id:      queue.id,
+      hospital_id:   (queue as { id: string; hospital_id?: string }).hospital_id ?? null,
+      doctor_id:     input.doctorId,
       department_id: input.departmentId,
-      status: 'waiting',
+      status:        'waiting',
     })
     .select()
     .single();

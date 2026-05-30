@@ -60,8 +60,14 @@ export default function TrackPage() {
   const deptName    = live?.departmentName ?? activeEntry?._departmentName ?? '…';
   const doctorName  = live?.doctorName     ?? activeEntry?._doctorName     ?? '…';
 
-  // When the doctor has advanced past this patient's token, the visit is complete.
-  const isDone = Boolean(live && live.currentToken > live.yourToken);
+  // Turn is done when doctor advanced past this token, OR queue went idle (0) and
+  // this token is no longer in the active waiting list (i.e. was served).
+  const isDone = Boolean(
+    live && (
+      live.currentToken > live.yourToken ||
+      (live.currentToken === 0 && !live.upcomingTokens.some((t) => t.isYou))
+    ),
+  );
 
   const handleDone = () => {
     if (selectedPatient) clearActiveEntry(selectedPatient.id);

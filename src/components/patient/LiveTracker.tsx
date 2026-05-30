@@ -32,8 +32,11 @@ export function LiveTracker() {
   if (!live) return null;
 
   const paused    = live.doctorStatus === 'paused';
-  const isCurrent = live.currentToken === live.yourToken;   // exactly your turn
-  const isDone    = live.currentToken > live.yourToken;     // turn has passed
+  const isCurrent = live.currentToken === live.yourToken;
+  // Turn has passed either when doctor advanced past your token, OR when queue went
+  // idle (current=0) and your token is no longer in the active waiting list.
+  const isDone    = live.currentToken > live.yourToken ||
+                    (live.currentToken === 0 && !live.upcomingTokens.some((t) => t.isYou));
   const isYou     = isCurrent;                              // keep alias for hero color
   const isNear    = ahead <= 2 && ahead > 0;
   const sinceCall = secsSince(live.lastCallAt);
