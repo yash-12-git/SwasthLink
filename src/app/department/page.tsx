@@ -10,6 +10,7 @@ import { colors }           from '@/theme';
 import { MOCK_DEPARTMENTS } from '@/lib/mockData';
 import { usePatientStore }  from '@/store/patientStore';
 import { useTranslation }   from '@/hooks/useTranslation';
+import { getDepartments }   from '@/services/departmentService';
 import type { Department }  from '@/types/department';
 
 export default function DepartmentPage() {
@@ -30,8 +31,7 @@ export default function DepartmentPage() {
   }, [account.id, selectedPatient, router]);
 
   useEffect(() => {
-    import('@/services/departmentService')
-      .then(({ getDepartments }) => getDepartments())
+    getDepartments()
       .then(setDepartments)
       .catch(() => setDepartments(MOCK_DEPARTMENTS))
       .finally(() => setLoading(false));

@@ -8,8 +8,12 @@ import { BottomNav }        from '@/components/layout/BottomNav';
 import { DoctorCard }       from '@/components/patient/DoctorCard';
 import { colors }           from '@/theme';
 import { MOCK_DOCTORS }     from '@/lib/mockData';
-import { usePatientStore }  from '@/store/patientStore';
-import { useTranslation }   from '@/hooks/useTranslation';
+import { usePatientStore }                             from '@/store/patientStore';
+import { useQueueStore }                               from '@/store/queueStore';
+import { useTranslation }                              from '@/hooks/useTranslation';
+import { getDepartments }                              from '@/services/departmentService';
+import { getDoctorsByDepartment }                      from '@/services/doctorService';
+import { joinQueue, getLiveQueueState, restoreQueueState } from '@/services/queueService';
 import type { Doctor }      from '@/types/doctor';
 import type { Department }  from '@/types/department';
 
@@ -39,14 +43,12 @@ export default function DoctorPage() {
   }, [account.id, selectedPatient, router]);
 
   useEffect(() => {
-    import('@/services/departmentService').then(({ getDepartments }) =>
-      getDepartments().then((depts) => setDept(depts.find((d) => d.id === deptId) ?? null)),
-    );
-
     setFetchingDoctors(true);
-    import('@/services/doctorService')
-      .then(({ getDoctorsByDepartment }) => getDoctorsByDepartment(deptId))
-      .then(setDoctors)
+    Promise.all([getDepartments(), getDoctorsByDepartment(deptId)])
+      .then(([depts, docs]) => {
+        setDept(depts.find((d) => d.id === deptId) ?? null);
+        setDoctors(docs);
+      })
       .catch(() => setDoctors(MOCK_DOCTORS[deptId] ?? []))
       .finally(() => setFetchingDoctors(false));
   }, [deptId]);
@@ -68,9 +70,6 @@ export default function DoctorPage() {
     setLoading(true);
     try {
       setDoctor(doc);
-
-      const { joinQueue, getLiveQueueState, restoreQueueState } = await import('@/services/queueService');
-      const { useQueueStore } = await import('@/store/queueStore');
 
       const deptName = dept?.name ?? deptId;
 

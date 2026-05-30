@@ -16,6 +16,8 @@ import { MOCK_DEPARTMENTS } from '@/lib/mockData';
 import type { Department } from '@/types/department';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePatientStore } from '@/store/patientStore';
+import { getDepartments, getLiveOverview } from '@/services/departmentService';
+import { getHospitalBySlug } from '@/services/hospitalService';
 
 const DEPT_COLORS = ['#1565C0', '#6A3FB8', '#0E7C7B', '#D32F2F', '#ED6C02'];
 const DEPT_BG     = ['#E3F2FD', '#EFE8FA', '#E2F4F3', '#FFEBEE', '#FFF3E0'];
@@ -36,9 +38,7 @@ function LandingPage() {
   React.useEffect(() => {
     const slug = searchParams.get('h');
     if (!slug) return;
-    import('@/services/hospitalService').then(({ getHospitalBySlug }) => {
-      getHospitalBySlug(slug).then((h) => { if (h) setHospital(h); }).catch(() => {});
-    });
+    getHospitalBySlug(slug).then((h) => { if (h) setHospital(h); }).catch(() => {});
   }, [searchParams, setHospital]);
 
   const HELPDESK = hospital.helpdesk_phone ?? process.env.NEXT_PUBLIC_HELPDESK_PHONE ?? '1800-180-1104';
@@ -50,10 +50,8 @@ function LandingPage() {
   ]);
 
   React.useEffect(() => {
-    import('@/services/departmentService').then(({ getDepartments, getLiveOverview }) => {
-      getDepartments().then(setDepartments).catch(() => {});
-      getLiveOverview().then(setLiveOverview).catch(() => {});
-    });
+    getDepartments().then(setDepartments).catch(() => {});
+    getLiveOverview().then(setLiveOverview).catch(() => {});
   }, []);
 
   // Patients who currently have an active token

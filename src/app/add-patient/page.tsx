@@ -13,6 +13,7 @@ import { TextField, SegmentedField } from '@/components/ui/Field';
 import { Button }          from '@/components/ui/Button';
 import { colors }          from '@/theme';
 import { usePatientStore } from '@/store/patientStore';
+import { createPatient }   from '@/services/accountService';
 import type { Gender }     from '@/types/patient';
 
 const schema = z.object({
@@ -41,7 +42,6 @@ export default function AddPatientPage() {
   const genderValue = watch('gender');
 
   const onSubmit = async (data: FormData) => {
-    const { createPatient } = await import('@/services/accountService');
     const patient = await createPatient({
       account_id: account.id!,
       name: data.name,

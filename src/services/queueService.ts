@@ -22,7 +22,6 @@ export interface JoinQueueResult {
 }
 
 export async function joinQueue(input: JoinQueueInput): Promise<JoinQueueResult> {
-  // Rate limit: 3 joins per patient per minute (prevents token spam)
   const rl = checkRateLimit(`join:${input.patientId}`, 'joinQueue');
   if (!rl.allowed) {
     throw new Error(`Too many queue join attempts. Please wait ${Math.ceil((rl.retryAfterMs ?? 60000) / 1000)}s before trying again.`);
@@ -46,24 +45,24 @@ export async function joinQueue(input: JoinQueueInput): Promise<JoinQueueResult>
     };
   }
 
-  // Return existing active entry instead of throwing — let the client redirect gracefully
-  const { data: existingEntry } = await supabase
-    .from('queue_entries')
-    .select('*')
-    .eq('patient_id', input.patientId)
-    .in('status', ['waiting', 'serving'])
-    .maybeSingle();
+  // Check for existing entry and fetch queue ID in parallel
+  const [{ data: existingEntry }, { data: queue, error: queueError }] = await Promise.all([
+    supabase
+      .from('queue_entries')
+      .select('*')
+      .eq('patient_id', input.patientId)
+      .in('status', ['waiting', 'serving'])
+      .maybeSingle(),
+    supabase
+      .from('queues')
+      .select('id')
+      .eq('doctor_id', input.doctorId)
+      .single(),
+  ]);
 
   if (existingEntry) {
     return { entry: existingEntry as QueueEntry, alreadyInQueue: true };
   }
-
-  // Fetch the pre-seeded queue for this doctor
-  const { data: queue, error: queueError } = await supabase
-    .from('queues')
-    .select('id')
-    .eq('doctor_id', input.doctorId)
-    .single();
 
   if (queueError || !queue) {
     throw new Error(
@@ -72,7 +71,6 @@ export async function joinQueue(input: JoinQueueInput): Promise<JoinQueueResult>
     );
   }
 
-  // Insert queue entry — token_number + token_label auto-assigned by DB trigger
   const { data, error } = await supabase
     .from('queue_entries')
     .insert({
@@ -89,36 +87,22 @@ export async function joinQueue(input: JoinQueueInput): Promise<JoinQueueResult>
   return { entry: data as QueueEntry, alreadyInQueue: false };
 }
 
-export async function getLiveQueueState(
+type QueueRow = { id: string; doctor_id: string; current_token: number; is_paused: boolean; updated_at: string };
+type EntryRow = { token_number: number; status: string };
+
+function buildLiveState(
+  queue: QueueRow,
+  entries: EntryRow[],
   queueId: string,
   yourToken: number,
   doctorName: string,
   departmentName: string,
   room: string,
-): Promise<LiveQueueState> {
-  if (!isSupabaseConfigured) {
-    return buildMockLiveQueue('mock-doctor', doctorName, departmentName, room, yourToken);
-  }
-
-  const { data: queue, error } = await supabase
-    .from('queues')
-    .select('*, queue_entries(*)')
-    .eq('id', queueId)
-    .single();
-
-  if (error) throw new Error(error.message);
-
-  const entries = (queue.queue_entries as QueueEntry[]).filter(
-    (e) => e.status === 'waiting' || e.status === 'serving',
-  );
-  entries.sort((a, b) => a.token_number - b.token_number);
-
+): LiveQueueState {
   const prefix = departmentName.charAt(0).toUpperCase();
-  const upcomingTokens = entries.map((e) => ({
-    token: e.token_number,
-    label: fmtToken(prefix, e.token_number),
-    isYou: e.token_number === yourToken,
-  }));
+  const activeEntries = entries
+    .filter((e) => e.status === 'waiting' || e.status === 'serving')
+    .sort((a, b) => a.token_number - b.token_number);
 
   return {
     queueId,
@@ -133,44 +117,86 @@ export async function getLiveQueueState(
     doctorStatus: queue.is_paused ? 'paused' : 'available',
     avgMinsPerPatient: 4,
     lastCallAt: new Date(queue.updated_at).getTime(),
-    upcomingTokens,
+    upcomingTokens: activeEntries.map((e) => ({
+      token: e.token_number,
+      label: fmtToken(prefix, e.token_number),
+      isYou: e.token_number === yourToken,
+    })),
   };
 }
 
-/**
- * Cancels a queue entry — sets status to 'cancelled' so the patient can rebook.
- * Only works for 'waiting' entries; a 'serving' entry can only be closed by admin.
- */
+export async function getLiveQueueState(
+  queueId: string,
+  yourToken: number,
+  doctorName: string,
+  departmentName: string,
+  room: string,
+): Promise<LiveQueueState> {
+  if (!isSupabaseConfigured) {
+    return buildMockLiveQueue('mock-doctor', doctorName, departmentName, room, yourToken);
+  }
+
+  // Fetch queue metadata and active entries in parallel; filter entries server-side
+  const [{ data: queue, error }, { data: entries }] = await Promise.all([
+    supabase
+      .from('queues')
+      .select('id, doctor_id, current_token, is_paused, updated_at')
+      .eq('id', queueId)
+      .single(),
+    supabase
+      .from('queue_entries')
+      .select('token_number, status')
+      .eq('queue_id', queueId)
+      .in('status', ['waiting', 'serving'])
+      .order('token_number'),
+  ]);
+
+  if (error) throw new Error(error.message);
+  return buildLiveState(queue as QueueRow, entries ?? [], queueId, yourToken, doctorName, departmentName, room);
+}
+
 export async function cancelQueueEntry(entryId: string): Promise<void> {
-  if (!isSupabaseConfigured) return; // mock mode: just drop locally
+  if (!isSupabaseConfigured) return;
 
   const { error } = await supabase
     .from('queue_entries')
     .update({ status: 'skipped' })
     .eq('id', entryId)
-    .eq('status', 'waiting'); // don't touch if already serving/done
+    .eq('status', 'waiting');
 
   if (error) throw new Error(error.message);
 }
 
-/**
- * Rebuilds live queue state from a persisted QueueEntry (e.g. after page refresh).
- * Fetches doctor + department names from the DB so callers don't need to pass them.
- */
 export async function restoreQueueState(entry: QueueEntry): Promise<LiveQueueState> {
   if (!isSupabaseConfigured) {
     return buildMockLiveQueue('mock-doctor', 'Doctor', 'OPD', 'Room', entry.token_number);
   }
 
-  const { data: doctor } = await supabase
-    .from('doctors')
-    .select('name, room, departments(name)')
-    .eq('id', entry.doctor_id)
-    .single();
+  // Fetch doctor info, queue metadata, and active entries all in parallel
+  const [{ data: doctor }, { data: queue, error: queueError }, { data: entries }] = await Promise.all([
+    supabase
+      .from('doctors')
+      .select('name, room, departments(name)')
+      .eq('id', entry.doctor_id)
+      .single(),
+    supabase
+      .from('queues')
+      .select('id, doctor_id, current_token, is_paused, updated_at')
+      .eq('id', entry.queue_id)
+      .single(),
+    supabase
+      .from('queue_entries')
+      .select('token_number, status')
+      .eq('queue_id', entry.queue_id)
+      .in('status', ['waiting', 'serving'])
+      .order('token_number'),
+  ]);
+
+  if (queueError || !queue) throw new Error(queueError?.message ?? 'Queue not found');
 
   const doctorName     = doctor?.name ?? 'Doctor';
   const departmentName = (doctor?.departments as unknown as { name: string } | null)?.name ?? 'OPD';
   const room           = doctor?.room ?? '';
 
-  return getLiveQueueState(entry.queue_id, entry.token_number, doctorName, departmentName, room);
+  return buildLiveState(queue as QueueRow, entries ?? [], entry.queue_id, entry.token_number, doctorName, departmentName, room);
 }

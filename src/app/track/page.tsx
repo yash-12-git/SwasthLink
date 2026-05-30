@@ -9,10 +9,11 @@ import { Pill }          from '@/components/ui/Pill';
 import { Button }        from '@/components/ui/Button';
 import { LiveTracker }   from '@/components/patient/LiveTracker';
 import { colors, radius, shadows } from '@/theme';
-import { usePatientStore }   from '@/store/patientStore';
-import { useQueueStore }     from '@/store/queueStore';
-import { useTranslation }    from '@/hooks/useTranslation';
-import type { Patient }      from '@/types/patient';
+import { usePatientStore }          from '@/store/patientStore';
+import { useQueueStore }            from '@/store/queueStore';
+import { useTranslation }           from '@/hooks/useTranslation';
+import { restoreQueueState, cancelQueueEntry } from '@/services/queueService';
+import type { Patient }             from '@/types/patient';
 
 export default function TrackPage() {
   const { t }              = useTranslation();
@@ -52,10 +53,7 @@ export default function TrackPage() {
   // Auto-restore live state after refresh or patient switch
   useEffect(() => {
     if (activeEntry && !live) {
-      import('@/services/queueService')
-        .then(({ restoreQueueState }) => restoreQueueState(activeEntry))
-        .then(setLive)
-        .catch(() => {});
+      restoreQueueState(activeEntry).then(setLive).catch(() => {});
     }
   }, [activeEntry, live, setLive]);
 
@@ -87,7 +85,6 @@ export default function TrackPage() {
     setCancelling(true);
     setCancelError(null);
     try {
-      const { cancelQueueEntry } = await import('@/services/queueService');
       await cancelQueueEntry(activeEntry.id);
       clearActiveEntry(selectedPatient.id);
       setLive(null);
