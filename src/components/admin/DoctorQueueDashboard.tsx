@@ -289,26 +289,46 @@ export function DoctorQueueDashboard() {
         {/* Now Serving card */}
         <Card pad="0" style={{ overflow: 'hidden' }}>
           <ServingHero paused={isPaused}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <span style={{
-                fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em',
-                color: isPaused ? colors.ink500 : 'rgba(255,255,255,0.8)',
-              }}>
-                Now Serving
-              </span>
-              <span style={{
-                fontSize: 12, fontWeight: 700,
-                background: isPaused ? colors.surface : 'rgba(255,255,255,0.16)',
-                color: isPaused ? colors.ink700 : '#fff',
-                padding: '4px 10px', borderRadius: radius.pill,
-              }}>
-                {fmtSecs(sinceCall)} in consult
-              </span>
-            </div>
-            <TokenBig>{currentToken === 0 ? '—' : currentTokenLabel}</TokenBig>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>
-              {currentName}
-            </div>
+            {currentToken === 0 ? (
+              /* Idle state — nobody being served yet */
+              <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                <div style={{
+                  fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em',
+                  color: isPaused ? colors.ink500 : 'rgba(255,255,255,0.7)', marginBottom: 12,
+                }}>
+                  {isPaused ? 'Queue Paused' : 'Ready to Start'}
+                </div>
+                <div style={{ fontSize: 38, fontWeight: 800, opacity: 0.35, letterSpacing: '0.06em' }}>
+                  · · ·
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginTop: 10, opacity: 0.75 }}>
+                  {upcoming.length > 0
+                    ? `${upcoming.length} patient${upcoming.length > 1 ? 's' : ''} waiting — click Next Patient`
+                    : 'No patients in queue yet'}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{
+                    fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em',
+                    color: isPaused ? colors.ink500 : 'rgba(255,255,255,0.8)',
+                  }}>
+                    Now Serving
+                  </span>
+                  <span style={{
+                    fontSize: 12, fontWeight: 700,
+                    background: isPaused ? colors.surface : 'rgba(255,255,255,0.16)',
+                    color: isPaused ? colors.ink700 : '#fff',
+                    padding: '4px 10px', borderRadius: radius.pill,
+                  }}>
+                    {fmtSecs(sinceCall)} in consult
+                  </span>
+                </div>
+                <TokenBig>{currentTokenLabel}</TokenBig>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>{currentName}</div>
+              </>
+            )}
           </ServingHero>
 
           {/* Desktop action buttons */}

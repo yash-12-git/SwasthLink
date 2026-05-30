@@ -174,7 +174,8 @@ export async function callNextInQueue(
     .limit(1)
     .maybeSingle();
 
-  const newToken = nextEntry ? nextEntry.token_number : queue.current_token + 1;
+  // Reset to 0 (idle) when queue is empty — avoids showing a ghost token like G-003
+  const newToken = nextEntry ? nextEntry.token_number : 0;
   await admin
     .from('queues')
     .update({ current_token: newToken })
