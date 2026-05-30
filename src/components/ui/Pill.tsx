@@ -1,23 +1,34 @@
 'use client';
 
-import styled from '@emotion/styled';
+import type { HTMLAttributes, CSSProperties } from 'react';
 import { colors, radius } from '@/theme';
 
-interface PillProps {
+interface PillProps extends HTMLAttributes<HTMLSpanElement> {
   color?: string;
   bg?:    string;
+  style?: CSSProperties;
 }
 
-export const Pill = styled.span<PillProps>`
-  display:       inline-flex;
-  align-items:   center;
-  gap:           6px;
-  padding:       6px 11px;
-  border-radius: ${radius.pill};
-  background:    ${({ bg = colors.surface2 }) => bg};
-  color:         ${({ color = colors.ink700 }) => color};
-  font-size:     12.5px;
-  font-weight:   600;
-  white-space:   nowrap;
-  line-height:   1;
-`;
+export function Pill({ color = colors.ink700, bg = colors.surface2, style, children, ...rest }: PillProps) {
+  return (
+    <span
+      style={{
+        display:      'inline-flex',
+        alignItems:   'center',
+        gap:          6,
+        padding:      '6px 11px',
+        borderRadius: radius.pill,
+        background:   bg,
+        color,
+        fontSize:     12.5,
+        fontWeight:   600,
+        whiteSpace:   'nowrap',
+        lineHeight:   1,
+        ...style,
+      }}
+      {...rest}
+    >
+      {children}
+    </span>
+  );
+}

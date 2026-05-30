@@ -1,51 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import styled from '@emotion/styled';
 import { colors, radius, touchTarget } from '@/theme';
 
-// ── Label ──────────────────────────────────────────────────────────────────
-const Label = styled.label`
-  display:     block;
-  font-size:   14px;
-  font-weight: 700;
-  color:       ${colors.ink700};
-  margin-bottom: 8px;
-`;
-
-const Hint = styled.p`
-  font-size:  12.5px;
-  color:      ${colors.ink500};
-  margin:     6px 0 0;
-`;
-
-// ── Text input ──────────────────────────────────────────────────────────────
-interface WrapProps { focused: boolean }
-const InputWrap = styled.div<WrapProps>`
-  display:       flex;
-  align-items:   center;
-  gap:           10px;
-  height:        56px;
-  padding:       0 16px;
-  border-radius: ${radius.sm};
-  background:    ${colors.surface};
-  border:        1.5px solid ${({ focused }) => focused ? colors.primary : colors.border};
-  box-shadow:    ${({ focused }) => focused ? `0 0 0 3px ${colors.primary50}` : 'none'};
-  transition:    border-color 0.15s, box-shadow 0.15s;
-`;
-
-const StyledInput = styled.input`
-  flex:           1;
-  border:         none;
-  outline:        none;
-  background:     transparent;
-  font-size:      16px;
-  font-weight:    600;
-  color:          ${colors.ink};
-  font-family:    inherit;
-  min-width:      0;
-  -webkit-appearance: none;
-`;
+// ── Text field ──────────────────────────────────────────────────────────────
 
 interface TextFieldProps {
   label?:       string;
@@ -68,10 +26,31 @@ export function TextField({
   const [focused, setFocused] = useState(false);
   return (
     <div>
-      {label && <Label>{label}</Label>}
-      <InputWrap focused={focused}>
-        {icon && <span style={{ color: focused ? colors.primary : colors.ink400, display: 'flex' }}>{icon}</span>}
-        <StyledInput
+      {label && (
+        <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: colors.ink700, marginBottom: 8 }}>
+          {label}
+        </label>
+      )}
+      <div
+        style={{
+          display:      'flex',
+          alignItems:   'center',
+          gap:          10,
+          height:       56,
+          padding:      '0 16px',
+          borderRadius: radius.sm,
+          background:   colors.surface,
+          border:       `1.5px solid ${focused ? colors.primary : colors.border}`,
+          boxShadow:    focused ? `0 0 0 3px ${colors.primary50}` : 'none',
+          transition:   'border-color 0.15s, box-shadow 0.15s',
+        }}
+      >
+        {icon && (
+          <span style={{ color: focused ? colors.primary : colors.ink400, display: 'flex' }}>
+            {icon}
+          </span>
+        )}
+        <input
           type={type}
           inputMode={inputMode}
           placeholder={placeholder}
@@ -80,15 +59,31 @@ export function TextField({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onChange={(e) => onChange?.(e.target.value)}
+          style={{
+            flex:              1,
+            border:            'none',
+            outline:           'none',
+            background:        'transparent',
+            fontSize:          16,
+            fontWeight:        600,
+            color:             colors.ink,
+            fontFamily:        'inherit',
+            minWidth:          0,
+            WebkitAppearance:  'none',
+          } as React.CSSProperties}
         />
-      </InputWrap>
-      {error && <Hint style={{ color: colors.danger }}>{error}</Hint>}
-      {!error && hint && <Hint>{hint}</Hint>}
+      </div>
+      {(error || hint) && (
+        <p style={{ fontSize: 12.5, color: error ? colors.danger : colors.ink500, margin: '6px 0 0' }}>
+          {error ?? hint}
+        </p>
+      )}
     </div>
   );
 }
 
 // ── Segmented options (gender, etc.) ────────────────────────────────────────
+
 interface Option { value: string; label: string; sub?: string }
 
 interface SegmentedFieldProps {
@@ -99,39 +94,49 @@ interface SegmentedFieldProps {
   onChange: (v: string) => void;
 }
 
-const SegBtn = styled.button<{ active: boolean }>`
-  height:        52px;
-  border-radius: ${radius.sm};
-  font-weight:   700;
-  font-size:     15px;
-  font-family:   inherit;
-  cursor:        pointer;
-  display:       flex;
-  flex-direction:column;
-  align-items:   center;
-  justify-content:center;
-  gap:           2px;
-  transition:    all 0.15s ease;
-  min-height:    ${touchTarget};
-
-  background: ${({ active }) => active ? colors.primary50 : colors.surface};
-  border:     1.5px solid ${({ active }) => active ? colors.primary : colors.border};
-  color:      ${({ active }) => active ? colors.primary : colors.ink700};
-`;
-
 export function SegmentedField({ label, options, value, error, onChange }: SegmentedFieldProps) {
   return (
     <div>
-      {label && <Label>{label}</Label>}
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${options.length}, 1fr)`, gap: '8px' }}>
-        {options.map((o) => (
-          <SegBtn key={o.value} active={value === o.value} onClick={() => onChange(o.value)} type="button">
-            {o.label}
-            {o.sub && <span style={{ fontSize: '11px', fontWeight: 600, opacity: 0.7 }}>{o.sub}</span>}
-          </SegBtn>
-        ))}
+      {label && (
+        <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: colors.ink700, marginBottom: 8 }}>
+          {label}
+        </label>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${options.length}, 1fr)`, gap: 8 }}>
+        {options.map((o) => {
+          const active = value === o.value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onChange(o.value)}
+              style={{
+                height:          52,
+                borderRadius:    radius.sm,
+                fontWeight:      700,
+                fontSize:        15,
+                fontFamily:      'inherit',
+                cursor:          'pointer',
+                display:         'flex',
+                flexDirection:   'column',
+                alignItems:      'center',
+                justifyContent:  'center',
+                gap:             2,
+                minHeight:       touchTarget,
+                background:      active ? colors.primary50 : colors.surface,
+                border:          `1.5px solid ${active ? colors.primary : colors.border}`,
+                color:           active ? colors.primary : colors.ink700,
+              }}
+            >
+              {o.label}
+              {o.sub && <span style={{ fontSize: 11, fontWeight: 600, opacity: 0.7 }}>{o.sub}</span>}
+            </button>
+          );
+        })}
       </div>
-      {error && <Hint style={{ color: colors.danger }}>{error}</Hint>}
+      {error && (
+        <p style={{ fontSize: 12.5, color: colors.danger, margin: '6px 0 0' }}>{error}</p>
+      )}
     </div>
   );
 }

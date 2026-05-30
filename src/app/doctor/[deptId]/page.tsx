@@ -8,12 +8,10 @@ import { BottomNav }        from '@/components/layout/BottomNav';
 import { DoctorCard }       from '@/components/patient/DoctorCard';
 import { colors }           from '@/theme';
 import { MOCK_DOCTORS }     from '@/lib/mockData';
-import { usePatientStore }                             from '@/store/patientStore';
-import { useQueueStore }                               from '@/store/queueStore';
-import { useTranslation }                              from '@/hooks/useTranslation';
-import { getDepartments }                              from '@/services/departmentService';
-import { getDoctorsByDepartment }                      from '@/services/doctorService';
-import { joinQueue, getLiveQueueState, restoreQueueState } from '@/services/queueService';
+import { usePatientStore }                               from '@/store/patientStore';
+import { useQueueStore }                                 from '@/store/queueStore';
+import { useTranslation }                                from '@/hooks/useTranslation';
+import { joinQueueAndGetState, restoreQueueState }       from '@/services/queueService';
 import type { Doctor }      from '@/types/doctor';
 import type { Department }  from '@/types/department';
 
@@ -44,7 +42,10 @@ export default function DoctorPage() {
 
   useEffect(() => {
     setFetchingDoctors(true);
-    Promise.all([getDepartments(), getDoctorsByDepartment(deptId)])
+    Promise.all([
+      fetch('/api/departments').then((r) => r.json() as Promise<Department[]>),
+      fetch(`/api/doctors?dept=${deptId}`).then((r) => r.json() as Promise<Doctor[]>),
+    ])
       .then(([depts, docs]) => {
         setDept(depts.find((d) => d.id === deptId) ?? null);
         setDoctors(docs);
@@ -73,7 +74,8 @@ export default function DoctorPage() {
 
       const deptName = dept?.name ?? deptId;
 
-      const { entry, alreadyInQueue } = await joinQueue({
+      // Single server call: join queue + fetch live state together
+      const { entry, alreadyInQueue, live } = await joinQueueAndGetState({
         patientId:      selectedPatient.id,
         doctorId:       doc.id,
         departmentId:   deptId,
@@ -82,28 +84,18 @@ export default function DoctorPage() {
         room:           doc.room,
       });
 
-      // Enrich the entry with names for homepage display
       const enrichedEntry = { ...entry, _departmentName: deptName, _doctorName: doc.name };
       setActiveEntry(selectedPatient.id, enrichedEntry);
 
       if (alreadyInQueue) {
-        // Entry exists in DB but wasn't in local store (e.g. different device)
         setJoinInfo(`${selectedPatient.name} already has an active token. Restoring your queue position…`);
-        const live = await restoreQueueState(entry);
+        // live from joinQueueAndGetState is already the restored state
         useQueueStore.getState().setLive(live);
         router.push('/track');
         return;
       }
 
-      const live = await getLiveQueueState(
-        entry.queue_id,
-        entry.token_number,
-        doc.name,
-        deptName,
-        doc.room,
-      );
       useQueueStore.getState().setLive(live);
-
       router.push('/confirm');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

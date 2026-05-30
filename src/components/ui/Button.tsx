@@ -1,18 +1,18 @@
 'use client';
 
-import styled from '@emotion/styled';
+import type { ButtonHTMLAttributes, CSSProperties } from 'react';
 import { colors, radius, touchTarget } from '@/theme';
 
 type Variant = 'primary' | 'success' | 'danger' | 'warning' | 'secondary' | 'ghost';
 type Size    = 'sm' | 'md' | 'lg';
 
-const variantMap: Record<Variant, { bg: string; fg: string; border: string; hoverBg: string }> = {
-  primary:   { bg: colors.primary,   fg: '#fff', border: 'transparent', hoverBg: colors.primaryDark },
-  success:   { bg: colors.success,   fg: '#fff', border: 'transparent', hoverBg: '#1B5E20' },
-  danger:    { bg: colors.danger,    fg: '#fff', border: 'transparent', hoverBg: '#B71C1C' },
-  warning:   { bg: colors.warning,   fg: '#fff', border: 'transparent', hoverBg: '#C75B00' },
-  secondary: { bg: colors.surface,   fg: colors.primary, border: colors.primary100, hoverBg: colors.primary50 },
-  ghost:     { bg: 'transparent',    fg: colors.ink700,  border: colors.border,     hoverBg: colors.surface2 },
+const variantMap: Record<Variant, { bg: string; fg: string; border: string }> = {
+  primary:   { bg: colors.primary,  fg: '#fff',         border: 'transparent'      },
+  success:   { bg: colors.success,  fg: '#fff',         border: 'transparent'      },
+  danger:    { bg: colors.danger,   fg: '#fff',         border: 'transparent'      },
+  warning:   { bg: colors.warning,  fg: '#fff',         border: 'transparent'      },
+  secondary: { bg: colors.surface,  fg: colors.primary, border: colors.primary100  },
+  ghost:     { bg: 'transparent',   fg: colors.ink700,  border: colors.border      },
 };
 
 const sizeMap: Record<Size, { h: string; fs: string; px: string }> = {
@@ -21,46 +21,51 @@ const sizeMap: Record<Size, { h: string; fs: string; px: string }> = {
   lg: { h: '56px', fs: '17px',   px: '24px' },
 };
 
-interface ButtonProps {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?:    Size;
   full?:    boolean;
-  disabled?: boolean;
+  style?:   CSSProperties;
 }
 
-export const Button = styled.button<ButtonProps>`
-  display:         inline-flex;
-  align-items:     center;
-  justify-content: center;
-  gap:             8px;
-  font-family:     inherit;
-  font-weight:     700;
-  letter-spacing:  0.01em;
-  white-space:     nowrap;
-  cursor:          pointer;
-  border-radius:   ${radius.sm};
-  transition:      background 0.16s ease, box-shadow 0.16s ease, transform 0.1s ease;
-  min-height:      ${touchTarget};
-
-  height:     ${({ size = 'md' }) => sizeMap[size].h};
-  font-size:  ${({ size = 'md' }) => sizeMap[size].fs};
-  padding:    0 ${({ size = 'md' }) => sizeMap[size].px};
-  width:      ${({ full }) => (full ? '100%' : 'auto')};
-
-  background: ${({ variant = 'primary', disabled }) =>
-    disabled ? colors.surface2 : variantMap[variant].bg};
-  color:  ${({ variant = 'primary', disabled }) =>
-    disabled ? colors.ink400 : variantMap[variant].fg};
-  border: 1.5px solid ${({ variant = 'primary', disabled }) =>
-    disabled ? colors.border : variantMap[variant].border};
-
-  &:hover:not(:disabled) {
-    background: ${({ variant = 'primary' }) => variantMap[variant].hoverBg};
-    box-shadow: ${({ variant = 'primary' }) =>
-      variant === 'ghost' || variant === 'secondary'
-        ? 'none'
-        : '0 6px 16px rgba(0,0,0,0.18)'};
-  }
-  &:active:not(:disabled) { transform: scale(0.98); }
-  &:disabled { cursor: not-allowed; }
-`;
+export function Button({
+  variant = 'primary',
+  size    = 'md',
+  full,
+  disabled,
+  style,
+  children,
+  ...rest
+}: ButtonProps) {
+  const v = variantMap[variant];
+  const s = sizeMap[size];
+  return (
+    <button
+      disabled={disabled}
+      style={{
+        display:         'inline-flex',
+        alignItems:      'center',
+        justifyContent:  'center',
+        gap:             8,
+        fontFamily:      'inherit',
+        fontWeight:      700,
+        letterSpacing:   '0.01em',
+        whiteSpace:      'nowrap',
+        cursor:          disabled ? 'not-allowed' : 'pointer',
+        borderRadius:    radius.sm,
+        height:          s.h,
+        fontSize:        s.fs,
+        padding:         `0 ${s.px}`,
+        width:           full ? '100%' : 'auto',
+        minHeight:       touchTarget,
+        background:      disabled ? colors.surface2 : v.bg,
+        color:           disabled ? colors.ink400   : v.fg,
+        border:          `1.5px solid ${disabled ? colors.border : v.border}`,
+        ...style,
+      }}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}

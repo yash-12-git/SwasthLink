@@ -1,31 +1,31 @@
 'use client';
 
-import styled from '@emotion/styled';
+import type { HTMLAttributes, CSSProperties } from 'react';
 import { colors, radius, shadows } from '@/theme';
 
-interface CardProps {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
   pad?:    string;
   hover?:  boolean;
   accent?: string;
+  style?:  CSSProperties;
 }
 
-export const Card = styled.div<CardProps>`
-  background:    ${colors.surface};
-  border-radius: ${radius.md};
-  border:        1px solid ${colors.border};
-  padding:       ${({ pad = '20px' }) => pad};
-  box-shadow:    ${shadows.sm};
-  transition:    box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
-  border-left:   ${({ accent }) => accent ? `4px solid ${accent}` : undefined};
-  cursor:        ${({ hover }) => (hover ? 'pointer' : 'default')};
-
-  ${({ hover }) =>
-    hover &&
-    `
-    &:hover {
-      box-shadow: 0 4px 12px rgba(16,32,46,0.08), 0 16px 40px rgba(16,32,46,0.08);
-      transform: translateY(-2px);
-      border-color: ${colors.borderStrong};
-    }
-  `}
-`;
+export function Card({ pad = '20px', hover, accent, style, children, ...rest }: CardProps) {
+  return (
+    <div
+      style={{
+        background:    colors.surface,
+        borderRadius:  radius.md,
+        border:        `1px solid ${colors.border}`,
+        padding:       pad,
+        boxShadow:     shadows.sm,
+        borderLeft:    accent ? `4px solid ${accent}` : undefined,
+        cursor:        hover ? 'pointer' : 'default',
+        ...style,
+      }}
+      {...rest}
+    >
+      {children}
+    </div>
+  );
+}

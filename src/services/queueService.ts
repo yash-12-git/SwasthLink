@@ -156,6 +156,57 @@ export async function getLiveQueueState(
   return buildLiveState(queue as QueueRow, entries ?? [], queueId, yourToken, doctorName, departmentName, room);
 }
 
+export interface JoinQueueAndGetStateResult {
+  entry: QueueEntry;
+  alreadyInQueue: boolean;
+  live: LiveQueueState;
+}
+
+/**
+ * Combines joinQueue + getLiveQueueState into a single server round-trip.
+ * Saves one full POST + Lambda invocation compared to calling them separately.
+ */
+export async function joinQueueAndGetState(
+  input: JoinQueueInput,
+): Promise<JoinQueueAndGetStateResult> {
+  const joinResult = await joinQueue(input);
+  const { entry, alreadyInQueue } = joinResult;
+
+  if (!isSupabaseConfigured) {
+    const live = buildMockLiveQueue(input.doctorId, input.doctorName, input.departmentName, input.room, entry.token_number);
+    return { entry, alreadyInQueue, live };
+  }
+
+  // Fetch queue + active entries in parallel now that we have the queue_id
+  const [{ data: queue, error }, { data: entries }] = await Promise.all([
+    supabase
+      .from('queues')
+      .select('id, doctor_id, current_token, is_paused, updated_at')
+      .eq('id', entry.queue_id)
+      .single(),
+    supabase
+      .from('queue_entries')
+      .select('token_number, status')
+      .eq('queue_id', entry.queue_id)
+      .in('status', ['waiting', 'serving'])
+      .order('token_number'),
+  ]);
+
+  if (error) throw new Error(error.message);
+
+  const live = buildLiveState(
+    queue as QueueRow,
+    entries ?? [],
+    entry.queue_id,
+    entry.token_number,
+    input.doctorName,
+    input.departmentName,
+    input.room,
+  );
+
+  return { entry, alreadyInQueue, live };
+}
+
 export async function cancelQueueEntry(entryId: string): Promise<void> {
   if (!isSupabaseConfigured) return;
 

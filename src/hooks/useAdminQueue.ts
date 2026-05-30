@@ -38,6 +38,14 @@ export function useAdminQueue(queueId: string | undefined) {
   useEffect(() => {
     if (!queueId) return;
 
+    const refresh = () => {
+      getAdminQueueState(queueId).then((s) => { if (s) setQueueState(s); });
+    };
+
+    // Refresh when doctor returns to the tab (screen unlock, app switch back)
+    const handleVisibility = () => { if (!document.hidden) refresh(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+
     if (isSupabaseConfigured) {
       const sb = getSupabaseClient();
       const channel = sb
@@ -45,21 +53,20 @@ export function useAdminQueue(queueId: string | undefined) {
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'queues', filter: `id=eq.${queueId}` },
-          () => {
-            getAdminQueueState(queueId).then((s) => { if (s) setQueueState(s); });
-          },
+          refresh,
         )
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'queue_entries', filter: `queue_id=eq.${queueId}` },
-          () => {
-            getAdminQueueState(queueId).then((s) => { if (s) setQueueState(s); });
-          },
+          refresh,
         )
         .subscribe();
 
       channelRef.current = channel;
-      return () => { sb.removeChannel(channel); };
+      return () => {
+        sb.removeChannel(channel);
+        document.removeEventListener('visibilitychange', handleVisibility);
+      };
     } else {
       // Mock mode: poll for new entries (simulating patients joining from patient app)
       pollRef.current = setInterval(() => {
@@ -67,7 +74,10 @@ export function useAdminQueue(queueId: string | undefined) {
           if (s) patchQueueState(s);
         });
       }, POLL_INTERVAL_MS);
-      return () => { if (pollRef.current) clearInterval(pollRef.current); };
+      return () => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        document.removeEventListener('visibilitychange', handleVisibility);
+      };
     }
   }, [queueId, setQueueState, patchQueueState]);
 

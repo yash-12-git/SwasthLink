@@ -16,7 +16,6 @@ import { MOCK_DEPARTMENTS } from '@/lib/mockData';
 import type { Department } from '@/types/department';
 import { useTranslation } from '@/hooks/useTranslation';
 import { usePatientStore } from '@/store/patientStore';
-import { getDepartments, getLiveOverview } from '@/services/departmentService';
 import { getHospitalBySlug } from '@/services/hospitalService';
 
 const DEPT_COLORS = ['#1565C0', '#6A3FB8', '#0E7C7B', '#D32F2F', '#ED6C02'];
@@ -50,8 +49,8 @@ function LandingPage() {
   ]);
 
   React.useEffect(() => {
-    getDepartments().then(setDepartments).catch(() => {});
-    getLiveOverview().then(setLiveOverview).catch(() => {});
+    fetch('/api/departments').then((r) => r.json()).then(setDepartments).catch(() => {});
+    fetch('/api/live-overview').then((r) => r.json()).then(setLiveOverview).catch(() => {});
   }, []);
 
   // Patients who currently have an active token
