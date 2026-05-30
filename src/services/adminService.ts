@@ -50,12 +50,24 @@ export async function getAdminQueueState(
 
   if (error || !queue) return null;
 
+  // Upcoming = waiting patients who have NOT yet been called (exclude current token)
   const { data: entries } = await admin
     .from('queue_entries')
     .select('token_number, token_label, patients(name, age, gender)')
     .eq('queue_id', queueId)
     .eq('status', 'waiting')
+    .neq('token_number', queue.current_token)
     .order('token_number', { ascending: true });
+
+  // seenToday = actual done count for today (not current_token which is a seed artifact)
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const { count: doneCount } = await admin
+    .from('queue_entries')
+    .select('id', { count: 'exact', head: true })
+    .eq('queue_id', queueId)
+    .eq('status', 'done')
+    .gte('created_at', todayStart.toISOString());
 
   const doctor = queue.doctors as unknown as {
     id: string; name: string; room: string; department_id: string;
@@ -88,7 +100,7 @@ export async function getAdminQueueState(
         gender: p?.gender,
       };
     }),
-    seenToday: queue.current_token,
+    seenToday: doneCount ?? 0,
   };
 }
 
@@ -122,7 +134,6 @@ export async function callNextInQueue(
 
   const admin = getAdminClient();
 
-  // Get current state
   const { data: queue } = await admin
     .from('queues')
     .select('current_token, is_paused')
@@ -131,21 +142,29 @@ export async function callNextInQueue(
 
   if (!queue || queue.is_paused) return getAdminQueueState(queueId);
 
-  const currentToken = queue.current_token;
-  const nextToken    = currentToken + 1;
-
-  // Mark current entry as done
+  // Mark the current patient as done (if they exist as a waiting entry)
   await admin
     .from('queue_entries')
     .update({ status: 'done' })
     .eq('queue_id', queueId)
-    .eq('token_number', currentToken)
+    .eq('token_number', queue.current_token)
     .eq('status', 'waiting');
 
-  // Increment current_token (triggers updated_at via trigger)
+  // Find the actual next waiting patient instead of blindly incrementing.
+  // This handles mismatches between current_token (seed value) and real token numbers.
+  const { data: nextEntry } = await admin
+    .from('queue_entries')
+    .select('token_number')
+    .eq('queue_id', queueId)
+    .eq('status', 'waiting')
+    .order('token_number', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const newToken = nextEntry ? nextEntry.token_number : queue.current_token + 1;
   await admin
     .from('queues')
-    .update({ current_token: nextToken })
+    .update({ current_token: newToken })
     .eq('id', queueId);
 
   return getAdminQueueState(queueId);
@@ -185,18 +204,32 @@ export async function skipNextInQueue(
 
   if (!queue) return null;
 
-  const nextToken    = queue.current_token + 1;
-  const skipped      = [...(queue.skipped_tokens ?? []), nextToken];
+  // Find the first waiting patient who hasn't been called yet (not the current one)
+  const { data: nextEntry } = await admin
+    .from('queue_entries')
+    .select('token_number')
+    .eq('queue_id', queueId)
+    .eq('status', 'waiting')
+    .neq('token_number', queue.current_token)
+    .order('token_number', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!nextEntry) return getAdminQueueState(queueId);
+
+  const skipped = [...(queue.skipped_tokens ?? []), nextEntry.token_number];
 
   await admin
     .from('queue_entries')
     .update({ status: 'skipped' })
     .eq('queue_id', queueId)
-    .eq('token_number', nextToken);
+    .eq('token_number', nextEntry.token_number);
 
+  // Only update skipped_tokens — do NOT change current_token.
+  // The current patient is still being served; skip only moves the next person to the skipped list.
   await admin
     .from('queues')
-    .update({ current_token: nextToken, skipped_tokens: skipped })
+    .update({ skipped_tokens: skipped })
     .eq('id', queueId);
 
   return getAdminQueueState(queueId);
