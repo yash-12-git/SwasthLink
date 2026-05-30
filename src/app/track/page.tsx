@@ -206,7 +206,7 @@ export default function TrackPage() {
                     <AlertTriangle size={20} color={colors.warning} style={{ flexShrink: 0, marginTop: 1 }} />
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 800, color: colors.ink, marginBottom: 2 }}>
-                        Cancel {selectedPatient?.name.split(' ')[0]}'s token?
+                        Cancel {selectedPatient?.name.split(' ')[0]}&apos;s token?
                       </div>
                       <div style={{ fontSize: 13, color: colors.ink500, fontWeight: 600, lineHeight: 1.4 }}>
                         They will lose their place in the queue and need a new token to return.

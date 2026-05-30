@@ -69,7 +69,7 @@ export const usePatientStore = create<PatientStore>()(
         set((s) => ({ activeEntries: { ...s.activeEntries, [patientId]: entry } })),
       clearActiveEntry: (patientId) =>
         set((s) => {
-          const { [patientId]: _removed, ...rest } = s.activeEntries;
+          const { [patientId]: _unused, ...rest } = s.activeEntries; // eslint-disable-line @typescript-eslint/no-unused-vars
           return { activeEntries: rest };
         }),
 
