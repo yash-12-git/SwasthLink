@@ -50,6 +50,7 @@ Data
 src/
   app/
     page.tsx                  Patient landing page (QR scan entry point)
+    select-hospital/          Hospital picker (shown when no QR context)
     register/                 Mobile number + OTP registration
     family/                   Family member list / add
     department/               Department picker
@@ -119,6 +120,7 @@ supabase/
 | Path | Who uses it | Notes |
 |------|-------------|-------|
 | `/` | Patient | Landing, live queue overview, dept shortcuts |
+| `/select-hospital` | Patient | Hospital picker (shown when no QR scan context) |
 | `/register` | Patient | Mobile number → creates account |
 | `/family` | Patient | Select or add family member |
 | `/department` | Patient | Pick OPD department |
@@ -136,11 +138,25 @@ supabase/
 
 ## Multi-Hospital Support
 
-- Every hospital has a `slug` (e.g. `dgh`).
-- QR codes printed at each hospital encode `https://app.example.com/?h=dgh`.
-- The patient app reads `?h=slug`, resolves the hospital via `getHospitalBySlug()`, and stores it in `patientStore`.
-- The header title, helpdesk number, and branding come from the resolved hospital record.
-- Staff logins are scoped to a `hospital_id` — a doctor from one hospital cannot see queues of another.
+Every hospital has a `slug` (e.g. `dgh`, `aiims`). Data is isolated at every layer:
+
+| Layer | How isolation is enforced |
+|-------|--------------------------|
+| DB (departments, doctors, queues) | `hospital_id` FK on every row |
+| Patient API routes | `?h=slug` param → two-step lookup (slug → uuid → filter) |
+| Patient store | `activeEntries: Record<hospitalId, Record<patientId, entry>>` — tokens at Hospital A are never visible on Hospital B |
+| Queue join | `joinQueue` scopes the duplicate-check to the current `hospital_id` — a patient can hold one active token per hospital |
+| Admin / doctor portal | `session.hospitalId` set at login from `staff_users`; all admin queries filter by it |
+
+**Entry point flows:**
+
+1. **QR scan (primary flow)** — Patient scans `https://app.example.com/?h=dgh` → `getHospitalBySlug('dgh')` → stored in `patientStore.hospital`. All subsequent API calls carry `?h=dgh`.
+
+2. **Direct URL / first visit (no QR)** — If `patientStore.hospital.id` is empty, the landing page redirects to `/select-hospital` — a list of all hospitals. Patient taps their hospital → stored → proceeds to landing.
+
+3. **Returning visit** — `hospital` is persisted in `localStorage` (`ht-patient-v3`). Next visit goes straight to landing with the previously selected hospital. QR scan always overrides the stored value.
+
+**Printing QR codes:** Each hospital gets a unique URL: `https://app.example.com/?h=<slug>`. Use any QR generator. Laminate and place at the hospital entrance.
 
 ---
 

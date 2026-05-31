@@ -19,7 +19,9 @@ import { useTranslation }   from '@/hooks/useTranslation';
 export default function ConfirmPage() {
   const { t }            = useTranslation();
   const selectedPatient  = usePatientStore((s) => s.selectedPatient);
-  const activeEntries    = usePatientStore((s) => s.activeEntries);
+  const hospital         = usePatientStore((s) => s.hospital);
+  const allEntries       = usePatientStore((s) => s.activeEntries);
+  const activeEntries    = allEntries[hospital.id ?? ''] ?? {};
   const selectedDoctor   = usePatientStore((s) => s.selectedDoctor);
   const selectedDept     = usePatientStore((s) => s.selectedDept);
   const ahead            = useQueueStore((s) => s.patientsAhead());

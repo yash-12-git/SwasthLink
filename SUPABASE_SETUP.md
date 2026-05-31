@@ -197,13 +197,55 @@ Open `http://localhost:3000/admin/tv` on any screen in the waiting area.
 
 ---
 
+## Adding a Second Hospital
+
+1. Insert a new hospital row:
+```sql
+INSERT INTO hospitals (slug, name, name_hi, city, helpdesk_phone)
+VALUES ('aiims', 'AIIMS Delhi', 'एम्स दिल्ली', 'New Delhi', '1800-XXX-XXXX');
+```
+
+2. Seed departments for the new hospital (give departments unique IDs — e.g. `aiims-general`, not `general`, to avoid PK collision with the first hospital):
+```sql
+-- Get the new hospital UUID
+SELECT id FROM hospitals WHERE slug = 'aiims';
+
+INSERT INTO departments (id, hospital_id, name, name_hi, icon, color, bg, sort_order) VALUES
+  ('aiims-general', '<AIIMS_UUID>', 'General OPD',  'सामान्य ओपीडी', 'stethoscope', '#1565C0', '#E3F2FD', 1),
+  ('aiims-cardio',  '<AIIMS_UUID>', 'Cardiology',   'हृदय रोग',       'heart',       '#D32F2F', '#FFEBEE', 2);
+```
+
+3. Insert doctors and queues exactly as in Step 4 above, using the new `<AIIMS_UUID>`.
+
+4. Print a new QR code pointing to `https://app.example.com/?h=aiims`.
+
+5. That's it — patient data (accounts, family members) is shared; all department/doctor/queue data is completely isolated between the two hospitals.
+
+---
+
+## Backfill hospital_id on Existing Rows
+
+If you have existing departments, doctors, queues, or queue_entries with `hospital_id = NULL`, run this to assign them to a hospital:
+
+```sql
+-- Replace 'dgh' with your hospital slug
+UPDATE departments   SET hospital_id = (SELECT id FROM hospitals WHERE slug = 'dgh') WHERE hospital_id IS NULL;
+UPDATE doctors       SET hospital_id = (SELECT id FROM hospitals WHERE slug = 'dgh') WHERE hospital_id IS NULL;
+UPDATE queues        SET hospital_id = (SELECT id FROM hospitals WHERE slug = 'dgh') WHERE hospital_id IS NULL;
+UPDATE queue_entries qe SET hospital_id = q.hospital_id
+  FROM queues q WHERE qe.queue_id = q.id AND qe.hospital_id IS NULL;
+```
+
+---
+
 ## Patient Flow (end-to-end reminder)
 
 1. Patient scans QR code → lands on `/?h=dgh`
-2. Tap "Get Token" → `/register` (enter mobile) → `/family` (select/add member)
-3. `/department` → pick OPD → `/doctor/[deptId]` → pick doctor
-4. Token assigned → `/confirm` shows token label + estimated wait
-5. `/track` shows live position in queue (updates via Realtime)
+2. If no QR scan: redirected to `/select-hospital` → taps hospital → stored
+3. Tap "Get Token" → `/register` (enter mobile) → `/family` (select/add member)
+4. `/department` → pick OPD → `/doctor/[deptId]` → pick doctor
+5. Token assigned → `/confirm` shows token label + estimated wait
+6. `/track` shows live position in queue (updates via Realtime)
 
 ---
 

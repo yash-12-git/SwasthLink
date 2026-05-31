@@ -30,11 +30,12 @@ interface PatientStore {
   selectedPatient: Patient | null;
   setSelectedPatient: (p: Patient) => void;
 
-  // ── Per-patient active queue entries ─────────────────────────────────
-  // One active token per patient; key = patient.id
-  activeEntries: Record<string, QueueEntry>;
-  setActiveEntry: (patientId: string, entry: QueueEntry) => void;
-  clearActiveEntry: (patientId: string) => void;
+  // ── Per-hospital, per-patient active queue entries ───────────────────
+  // Outer key = hospital.id; inner key = patient.id
+  // Keeps Hospital A's tokens invisible when the user opens Hospital B's page
+  activeEntries: Record<string, Record<string, QueueEntry>>;
+  setActiveEntry: (hospitalId: string, patientId: string, entry: QueueEntry) => void;
+  clearActiveEntry: (hospitalId: string, patientId: string) => void;
 
   // ── Navigation state (not persisted) ────────────────────────────────
   selectedDept: Department | null;
@@ -73,12 +74,18 @@ export const usePatientStore = create<PatientStore>()(
 
       setSelectedPatient: (selectedPatient) => set({ selectedPatient }),
 
-      setActiveEntry: (patientId, entry) =>
-        set((s) => ({ activeEntries: { ...s.activeEntries, [patientId]: entry } })),
-      clearActiveEntry: (patientId) =>
+      setActiveEntry: (hospitalId, patientId, entry) =>
+        set((s) => ({
+          activeEntries: {
+            ...s.activeEntries,
+            [hospitalId]: { ...s.activeEntries[hospitalId], [patientId]: entry },
+          },
+        })),
+      clearActiveEntry: (hospitalId, patientId) =>
         set((s) => {
-          const { [patientId]: _unused, ...rest } = s.activeEntries; // eslint-disable-line @typescript-eslint/no-unused-vars
-          return { activeEntries: rest };
+          const hospitalEntries = { ...s.activeEntries[hospitalId] };
+          delete hospitalEntries[patientId];
+          return { activeEntries: { ...s.activeEntries, [hospitalId]: hospitalEntries } };
         }),
 
       setSelectedDept:   (selectedDept)   => set({ selectedDept }),
@@ -87,7 +94,7 @@ export const usePatientStore = create<PatientStore>()(
       clearAccount: () => set(initialState),
     }),
     {
-      name: 'ht-patient-v2',
+      name: 'ht-patient-v3',
       partialize: (s) => ({
         locale:          s.locale,
         hospital:        s.hospital,

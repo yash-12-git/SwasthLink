@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { QrCode, RefreshCw, Users, ChevronRight, Phone, Ticket, Clock, User } from 'lucide-react';
 import { MobileLayout }   from '@/components/layout/MobileLayout';
 import { PatientHeader }  from '@/components/layout/PatientHeader';
@@ -23,22 +23,28 @@ const DEPT_BG     = ['#E3F2FD', '#EFE8FA', '#E2F4F3', '#FFEBEE', '#FFF3E0'];
 
 function LandingPage() {
   const { t, locale }      = useTranslation();
+  const router             = useRouter();
   const account            = usePatientStore((s) => s.account);
   const familyMembers      = usePatientStore((s) => s.familyMembers);
   const selectedPatient    = usePatientStore((s) => s.selectedPatient);
   const setSelectedPatient = usePatientStore((s) => s.setSelectedPatient);
-  const activeEntries      = usePatientStore((s) => s.activeEntries);
   const setHospital        = usePatientStore((s) => s.setHospital);
   const hospital           = usePatientStore((s) => s.hospital);
+  const allEntries         = usePatientStore((s) => s.activeEntries);
+  const activeEntries      = allEntries[hospital.id ?? ''] ?? {};
 
   const searchParams = useSearchParams();
 
-  // Read ?h=slug from QR code and resolve hospital data
+  // Read ?h=slug from QR code and resolve hospital data.
+  // If no slug in URL and no hospital stored yet, send user to selection screen.
   React.useEffect(() => {
     const slug = searchParams.get('h');
-    if (!slug) return;
-    getHospitalBySlug(slug).then((h) => { if (h) setHospital(h); }).catch(() => {});
-  }, [searchParams, setHospital]);
+    if (slug) {
+      getHospitalBySlug(slug).then((h) => { if (h) setHospital(h); }).catch(() => {});
+    } else if (!hospital.id) {
+      router.replace('/select-hospital');
+    }
+  }, [searchParams, setHospital, hospital.id, router]);
 
   const HELPDESK = hospital.helpdesk_phone ?? process.env.NEXT_PUBLIC_HELPDESK_PHONE ?? '1800-180-1104';
 
@@ -49,9 +55,10 @@ function LandingPage() {
   ]);
 
   React.useEffect(() => {
-    fetch('/api/departments').then((r) => r.json()).then(setDepartments).catch(() => {});
-    fetch('/api/live-overview').then((r) => r.json()).then(setLiveOverview).catch(() => {});
-  }, []);
+    const h = hospital.slug ? `?h=${hospital.slug}` : '';
+    fetch(`/api/departments${h}`).then((r) => r.json()).then(setDepartments).catch(() => {});
+    fetch(`/api/live-overview${h}`).then((r) => r.json()).then(setLiveOverview).catch(() => {});
+  }, [hospital.slug]);
 
   // Patients who currently have an active token
   const activeVisits = familyMembers.filter((p) => activeEntries[p.id]);

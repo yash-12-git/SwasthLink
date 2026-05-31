@@ -19,6 +19,7 @@ export default function DepartmentPage() {
   const selectedPatient    = usePatientStore((s) => s.selectedPatient);
   const account            = usePatientStore((s) => s.account);
   const setSelectedPatient = usePatientStore((s) => s.setSelectedPatient);
+  const hospital           = usePatientStore((s) => s.hospital);
 
   const [departments, setDepartments] = useState<Department[]>(MOCK_DEPARTMENTS);
   const [loading, setLoading]         = useState(true);
@@ -30,12 +31,13 @@ export default function DepartmentPage() {
   }, [account.id, selectedPatient, router]);
 
   useEffect(() => {
-    fetch('/api/departments')
+    const h = hospital.slug ? `?h=${hospital.slug}` : '';
+    fetch(`/api/departments${h}`)
       .then((r) => r.json())
       .then(setDepartments)
       .catch(() => setDepartments(MOCK_DEPARTMENTS))
       .finally(() => setLoading(false));
-  }, []);
+  }, [hospital.slug]);
 
   const handleSelect = (dept: Department) => {
     setSelectedDept(dept);

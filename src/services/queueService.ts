@@ -14,6 +14,7 @@ interface JoinQueueInput {
   doctorName: string;
   departmentName: string;
   room: string;
+  hospitalId?: string;
 }
 
 export interface JoinQueueResult {
@@ -45,14 +46,17 @@ export async function joinQueue(input: JoinQueueInput): Promise<JoinQueueResult>
     };
   }
 
-  // Check for existing entry and fetch queue ID + hospital_id in parallel
+  // Check for existing entry scoped to this hospital, and fetch queue ID in parallel.
+  // Scoping to hospital_id allows a patient to hold one active token per hospital.
+  let existingEntryQuery = supabase
+    .from('queue_entries')
+    .select('*')
+    .eq('patient_id', input.patientId)
+    .in('status', ['waiting', 'serving']);
+  if (input.hospitalId) existingEntryQuery = existingEntryQuery.eq('hospital_id', input.hospitalId);
+
   const [{ data: existingEntry }, { data: queue, error: queueError }] = await Promise.all([
-    supabase
-      .from('queue_entries')
-      .select('*')
-      .eq('patient_id', input.patientId)
-      .in('status', ['waiting', 'serving'])
-      .maybeSingle(),
+    existingEntryQuery.maybeSingle(),
     supabase
       .from('queues')
       .select('id, hospital_id')

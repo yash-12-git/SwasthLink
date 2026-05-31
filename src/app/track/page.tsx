@@ -20,8 +20,10 @@ export default function TrackPage() {
   const familyMembers      = usePatientStore((s) => s.familyMembers);
   const selectedPatient    = usePatientStore((s) => s.selectedPatient);
   const setSelectedPatient = usePatientStore((s) => s.setSelectedPatient);
-  const activeEntries      = usePatientStore((s) => s.activeEntries);
+  const hospital           = usePatientStore((s) => s.hospital);
+  const allEntries         = usePatientStore((s) => s.activeEntries);
   const clearActiveEntry   = usePatientStore((s) => s.clearActiveEntry);
+  const activeEntries      = allEntries[hospital.id ?? ''] ?? {};
   const live               = useQueueStore((s) => s.live);
   const setLive            = useQueueStore((s) => s.setLive);
 
@@ -70,7 +72,7 @@ export default function TrackPage() {
   );
 
   const handleDone = () => {
-    if (selectedPatient) clearActiveEntry(selectedPatient.id);
+    if (selectedPatient) clearActiveEntry(hospital.id ?? '', selectedPatient.id);
     setLive(null);
   };
   const isRestoring = Boolean(activeEntry && !live);
@@ -92,7 +94,7 @@ export default function TrackPage() {
     setCancelError(null);
     try {
       await cancelQueueEntry(activeEntry.id);
-      clearActiveEntry(selectedPatient.id);
+      clearActiveEntry(hospital.id ?? '', selectedPatient.id);
       setLive(null);
       setShowCancel(false);
     } catch (err) {

@@ -4,17 +4,26 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { MOCK_DOCTORS } from '@/lib/mockData';
 import type { Doctor, DoctorStatus } from '@/types/doctor';
 
-export async function getDoctorsByDepartment(deptId: string): Promise<Doctor[]> {
+export async function getDoctorsByDepartment(deptId: string, hospitalSlug?: string): Promise<Doctor[]> {
   if (!isSupabaseConfigured) {
     return MOCK_DOCTORS[deptId] ?? MOCK_DOCTORS.general ?? [];
   }
 
+  let hospitalId: string | null = null;
+  if (hospitalSlug) {
+    const { data: hosp } = await supabase.from('hospitals').select('id').eq('slug', hospitalSlug).single();
+    hospitalId = hosp?.id ?? null;
+  }
+
   // Single query: doctors + their queue + waiting entry count via nested select
-  const { data: doctors, error } = await supabase
+  let query = supabase
     .from('doctors')
     .select('*, queues(id, current_token, is_paused, queue_entries(queue_id, status))')
-    .eq('department_id', deptId)
-    .order('created_at');
+    .eq('department_id', deptId);
+
+  if (hospitalId) query = query.eq('hospital_id', hospitalId);
+
+  const { data: doctors, error } = await query.order('created_at');
 
   if (error) throw new Error(error.message);
   if (!doctors?.length) return [];

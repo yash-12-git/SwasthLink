@@ -19,7 +19,9 @@ export default function FamilyPage() {
   const familyMembers      = usePatientStore((s) => s.familyMembers);
   const setFamilyMembers   = usePatientStore((s) => s.setFamilyMembers);
   const setSelectedPatient = usePatientStore((s) => s.setSelectedPatient);
-  const activeEntries      = usePatientStore((s) => s.activeEntries);
+  const hospital           = usePatientStore((s) => s.hospital);
+  const allEntries         = usePatientStore((s) => s.activeEntries);
+  const activeEntries      = allEntries[hospital.id ?? ''] ?? {};
   const clearAccount       = usePatientStore((s) => s.clearAccount);
 
   // Guard: must be logged in

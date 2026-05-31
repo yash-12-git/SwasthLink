@@ -26,6 +26,7 @@ export default function DoctorPage() {
   const selectedPatient   = usePatientStore((s) => s.selectedPatient);
   const activeEntries     = usePatientStore((s) => s.activeEntries);
   const account           = usePatientStore((s) => s.account);
+  const hospital          = usePatientStore((s) => s.hospital);
 
   const [loading, setLoading]             = useState(false);
   const [joinError, setJoinError]         = useState<string | null>(null);
@@ -42,9 +43,10 @@ export default function DoctorPage() {
 
   useEffect(() => {
     setFetchingDoctors(true);
+    const h = hospital.slug ? `&h=${hospital.slug}` : '';
     Promise.all([
-      fetch('/api/departments').then((r) => r.json() as Promise<Department[]>),
-      fetch(`/api/doctors?dept=${deptId}`).then((r) => r.json() as Promise<Doctor[]>),
+      fetch(`/api/departments${hospital.slug ? `?h=${hospital.slug}` : ''}`).then((r) => r.json() as Promise<Department[]>),
+      fetch(`/api/doctors?dept=${deptId}${h}`).then((r) => r.json() as Promise<Doctor[]>),
     ])
       .then(([depts, docs]) => {
         setDept(depts.find((d) => d.id === deptId) ?? null);
@@ -52,7 +54,7 @@ export default function DoctorPage() {
       })
       .catch(() => setDoctors(MOCK_DOCTORS[deptId] ?? []))
       .finally(() => setFetchingDoctors(false));
-  }, [deptId]);
+  }, [deptId, hospital.slug]);
 
   const handleJoin = async (doc: Doctor) => {
     if (!selectedPatient) return;
@@ -60,7 +62,7 @@ export default function DoctorPage() {
     setJoinInfo(null);
 
     // Check local store first — one active token per patient
-    const localEntry = activeEntries[selectedPatient.id];
+    const localEntry = (activeEntries[hospital.id ?? ''] ?? {})[selectedPatient.id];
     if (localEntry) {
       setJoinError(
         `${selectedPatient.name} already has Token ${localEntry.token_label}${localEntry._departmentName ? ` in ${localEntry._departmentName}` : ''}. Please wait for the current appointment to complete.`,
@@ -82,10 +84,11 @@ export default function DoctorPage() {
         doctorName:     doc.name,
         departmentName: deptName,
         room:           doc.room,
+        hospitalId:     hospital.id,
       });
 
       const enrichedEntry = { ...entry, _departmentName: deptName, _doctorName: doc.name };
-      setActiveEntry(selectedPatient.id, enrichedEntry);
+      setActiveEntry(hospital.id ?? '', selectedPatient.id, enrichedEntry);
 
       if (alreadyInQueue) {
         setJoinInfo(`${selectedPatient.name} already has an active token. Restoring your queue position…`);

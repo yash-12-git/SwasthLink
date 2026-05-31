@@ -12,19 +12,31 @@ export interface DeptQueueOverview {
   color:             string;
 }
 
-export async function getDepartments(): Promise<Department[]> {
+export async function getDepartments(hospitalSlug?: string): Promise<Department[]> {
   if (!isSupabaseConfigured) {
     return MOCK_DEPARTMENTS;
   }
 
-  const { data, error } = await supabase
+  let hospitalId: string | null = null;
+  if (hospitalSlug) {
+    const { data: hosp } = await supabase
+      .from('hospitals')
+      .select('id')
+      .eq('slug', hospitalSlug)
+      .single();
+    hospitalId = hosp?.id ?? null;
+  }
+
+  let query = supabase
     .from('departments')
-    .select('id, name, name_hi, icon, color, bg, sort_order')
-    .order('sort_order');
+    .select('id, name, name_hi, icon, color, bg, sort_order');
+
+  if (hospitalId) query = query.eq('hospital_id', hospitalId);
+
+  const { data, error } = await query.order('sort_order');
 
   if (error) throw new Error(error.message);
 
-  // Supabase returns snake_case column names — remap to match the Department type
   return (data ?? []).map((row) => ({
     id:    row.id,
     name:  row.name,
@@ -36,7 +48,7 @@ export async function getDepartments(): Promise<Department[]> {
 }
 
 /** Returns current-token info for each department — used on the landing page "Now Serving" strip. */
-export async function getLiveOverview(): Promise<DeptQueueOverview[]> {
+export async function getLiveOverview(hospitalSlug?: string): Promise<DeptQueueOverview[]> {
   if (!isSupabaseConfigured) {
     return [
       { deptId: 'general', deptName: 'General OPD', deptNameHi: 'सामान्य ओपीडी', currentTokenLabel: 'G-042', color: '#1565C0' },
@@ -45,10 +57,17 @@ export async function getLiveOverview(): Promise<DeptQueueOverview[]> {
   }
 
   // Join queues → doctors → departments to get current token per department
-  const { data, error } = await supabase
+  let query = supabase
     .from('queues')
-    .select('current_token, doctors(department_id, departments(id, name, name_hi, color))')
+    .select('current_token, hospital_id, doctors(department_id, departments(id, name, name_hi, color))')
     .eq('is_paused', false);
+
+  if (hospitalSlug) {
+    const { data: hosp } = await supabase.from('hospitals').select('id').eq('slug', hospitalSlug).single();
+    if (hosp) query = query.eq('hospital_id', hosp.id);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw new Error(error.message);
 

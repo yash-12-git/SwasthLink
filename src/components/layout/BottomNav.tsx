@@ -17,8 +17,9 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const pathname     = usePathname();
   const { t }        = useTranslation();
-  const activeEntries = usePatientStore((s) => s.activeEntries);
-  const hasAnyActive  = Object.keys(activeEntries).length > 0;
+  const hospital      = usePatientStore((s) => s.hospital);
+  const allEntries    = usePatientStore((s) => s.activeEntries);
+  const hasAnyActive  = Object.keys(allEntries[hospital.id ?? ''] ?? {}).length > 0;
 
   return (
     <nav
